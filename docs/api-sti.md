@@ -36,35 +36,90 @@ https://tele.ongrentavel.com.br/scriptcase/app/ApiSTI/blank/?codigo_cliente=HCL&
 
 A busca é paginada. Para descobrir o total de páginas, a própria documentação
 orienta repetir a mesma chamada com uma página "estourada" (ex.: `pagina=99999`);
-a resposta traz o total de páginas disponível junto com os dados. Na prática,
-isso indica que **toda resposta** (não só a primeira) inclui a metainformação de
-paginação — por isso `fetchAllRecords` lê o total de páginas já na primeira
-chamada (`pagina=1`) e seque buscando `pagina=2..total`.
+a resposta traz o total de páginas disponível junto com os dados. Confirmado
+com uma chamada real (2026-07-14, cliente HCL, julho/2026): `pagina=99999` retorna
+HTTP 200, `dados: []` e `total_paginas: 57` correto. Ou seja, **toda resposta**
+(não só a primeira) inclui a metainformação de paginação — por isso
+`fetchAllRecords` lê o total de páginas já na primeira chamada (`pagina=1`) e
+segue buscando `pagina=2..total`.
 
-## ⚠️ Schema da resposta — pendente de confirmação
+**Regra confirmada:** o parâmetro `limite` precisa ser **exatamente 1000**.
+Qualquer outro valor retorna HTTP 400 com `status:false` e
+`mensagem:"O parâmetro limite deve ser igual a 1000"`. O cliente
+(`src/apiClient.js`) trava isso via a constante `REQUIRED_LIMITE`.
 
-Este projeto foi construído **sem acesso de rede ao domínio da API** no ambiente
-de build (bloqueado pela política de egress do sandbox). Por isso:
+## Schema real confirmado (2026-07-14, cliente HCL)
 
-- `src/apiClient.js` tenta reconhecer automaticamente os nomes de campo mais
-  comuns para a lista de registros (`dados`, `data`, `registros`, ...) e para o
-  total de páginas (`total_paginas`, `totalPages`, ...).
-- **Assim que houver acesso à API** (rede liberada neste ambiente, ou execução
-  local/em outro ambiente com acesso), rode:
+Resposta de sucesso:
 
-  ```bash
-  npm run inspect -- --cliente=HCL --inicio=2026-07-01 --fim=2026-07-31
-  ```
+```json
+{
+  "status": true,
+  "mensagem": "Consulta realizada com sucesso",
+  "versao_api": "2026-07-13-unificada-v11",
+  "request_id": "5cd235b7647de708f3dc4213",
+  "recurso": "doacoes",
+  "total": 1000,
+  "total_registros": 56603,
+  "total_paginas": 57,
+  "pagina": 1,
+  "limite": 1000,
+  "faixa_inicio": 1,
+  "faixa_fim": 1000,
+  "dados": [ { "...": "ver campos do registro abaixo" } ]
+}
+```
 
-  Isso imprime a resposta bruta (chaves de topo + JSON). Confirme:
-  1. o nome exato do campo com a lista de registros;
-  2. o nome exato do campo com o total de páginas;
-  3. os nomes dos campos de cada registro (valor, data de vencimento, operador/
-     operadora, status, etc.) — necessários para os futuros filtros por operadora.
+Resposta de erro de negócio (ex.: `limite` inválido) — HTTP 400 e `status:false`:
 
-  Se os nomes reais não baterem com os candidatos em `DATA_KEY_CANDIDATES` /
-  `TOTAL_PAGES_KEY_CANDIDATES` (topo de `src/apiClient.js`), adicione-os à lista
-  (ou fixe o nome direto, é mais simples).
+```json
+{ "status": false, "mensagem": "O parâmetro limite deve ser igual a 1000", "dados": [], "total_paginas": 0 }
+```
+
+`src/apiClient.js` trata isso lançando `ApiStiError` com a `mensagem` da API.
+
+### Campos de cada registro em `dados[]`
+
+| Campo           | Exemplo                     | Observação                                  |
+|------------------|------------------------------|-----------------------------------------------|
+| `contribuinte`   | `4`                          | ID do doador                                   |
+| `tpdoac`         | `"COPEL"`                    | Tipo/origem da doação                          |
+| `nossonum`       | `0`                          |                                                 |
+| `vencimento`     | `"2026-07-01 00:00:00"`      | Data de vencimento                             |
+| `valor_previsto` | `"20.000000"`                | Valor esperado (string decimal)                |
+| `pagamento`      | `"2026-07-01 00:00:00"`      | Data de pagamento                              |
+| `valor_pago`     | `"0.000000"`                 | Valor efetivamente pago                        |
+| `status_doacao`  | `"PENDENTE"`                 | Status da doação                               |
+| `nome`           | `"MATEUS MENOCI GHELERE"`    | Nome do doador (PII)                           |
+| `tipodoador`     | `"C"`                        |                                                 |
+| `genero`         | `"M"`                        |                                                 |
+| `operador`       | `"111"`                      | **Código da operadora/telefonista** — chave para o filtro por operadora dos painéis |
+| `operadorfixo`   | `"7"`                        | Operador fixo associado                        |
+| `email`          | `"..."`                      | PII                                            |
+| `doc`            | `"04382733979"`              | CPF (PII sensível)                             |
+| `rua`, `num`, `comp`, `bairro`, `cidade`, `uf`, `cep` | — | Endereço (PII)          |
+| `niver`          | `"1983-12-27 00:00:00"`      | Data de nascimento (PII)                       |
+| `telefone`, `cel1`, `cel2` | —                   | Telefones (PII)                                |
+
+⚠️ Os registros contêm CPF, telefone, e-mail e endereço de doadores. Tratar
+como dado sensível: nunca commitar arquivos de `output/` (já gitignorados),
+e no KairOS/Lovable aplicar as mesmas restrições de acesso já usadas para
+dados de doadores.
+
+## Ambiente e rede
+
+Ao rodar os scripts Node deste projeto num ambiente com proxy de saída
+obrigatório (ex.: Claude Code on the web / Cowork), o `fetch` nativo do Node
+18-22 **não lê `HTTPS_PROXY`/`HTTP_PROXY` por padrão**. Se `npm run inspect`
+ou `npm run fetch` falharem com `403 Host not in allowlist` mesmo com a rede
+liberada (mas um `curl` direto funcionar), rode com
+`NODE_USE_ENV_PROXY=1` (Node ≥ 22.21):
+
+```bash
+NODE_USE_ENV_PROXY=1 npm run fetch -- --cliente=HCL --inicio=2026-07-01 --fim=2026-07-31
+```
+
+Isso não deve ser necessário fora desse tipo de ambiente sandboxed.
 
 ## Próximos passos (fora do escopo desta primeira entrega)
 

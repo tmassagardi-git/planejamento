@@ -1,6 +1,13 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { buildQueryUrl, parseApiResponse, fetchPage, fetchAllRecords, ApiStiError } from '../src/apiClient.js';
+import {
+  buildQueryUrl,
+  parseApiResponse,
+  fetchPage,
+  fetchAllRecords,
+  ApiStiError,
+  REQUIRED_LIMITE,
+} from '../src/apiClient.js';
 
 function jsonResponse(status, body) {
   return {
@@ -71,6 +78,36 @@ test('fetchPage lança ApiStiError em HTTP não-OK', async () => {
 test('fetchPage lança ApiStiError em corpo que não é JSON', async () => {
   const fetchImpl = async () => ({ ok: true, status: 200, text: async () => '<html>erro</html>' });
   await assert.rejects(() => fetchPage({ baseUrl: 'https://example.com/', codigoCliente: 'HCL', pagina: 1, fetchImpl }));
+});
+
+test('fetchPage lança ApiStiError quando a API retorna status:false (erro de negócio)', async () => {
+  const fetchImpl = async () =>
+    jsonResponse(400, { status: false, mensagem: 'O parâmetro limite deve ser igual a 1000', dados: [] });
+  await assert.rejects(
+    () => fetchPage({ baseUrl: 'https://example.com/', codigoCliente: 'HCL', pagina: 1, limite: 5, fetchImpl }),
+    (err) => {
+      assert.ok(err instanceof ApiStiError);
+      assert.match(err.message, /limite deve ser igual a 1000/);
+      return true;
+    }
+  );
+});
+
+test('fetchAllRecords rejeita limite diferente de 1000 (exigência confirmada na API real)', async () => {
+  await assert.rejects(
+    () =>
+      fetchAllRecords({
+        baseUrl: 'https://example.com/',
+        token: 'tok',
+        codigoCliente: 'HCL',
+        vencimentoIni: '2026-07-01',
+        vencimentoFim: '2026-07-31',
+        limite: 500,
+        fetchImpl: async () => jsonResponse(200, { dados: [], total_paginas: 1 }),
+      }),
+    ApiStiError
+  );
+  assert.equal(REQUIRED_LIMITE, 1000);
 });
 
 test('fetchAllRecords pagina até o total informado e agrega os registros', async () => {

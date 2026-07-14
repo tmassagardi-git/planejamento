@@ -9,7 +9,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { config, resolveClientToken } from '../src/config.js';
-import { fetchAllRecords } from '../src/apiClient.js';
+import { fetchAllRecords, REQUIRED_LIMITE } from '../src/apiClient.js';
 import { parseArgs } from '../src/cliArgs.js';
 
 const args = parseArgs(process.argv.slice(2));
@@ -20,13 +20,14 @@ const vencimentoFim = args.fim;
 
 if (!codigoCliente || !vencimentoIni || !vencimentoFim) {
   console.error(
-    'Uso: npm run fetch -- --cliente=HCL --inicio=2026-07-01 --fim=2026-07-31 [--limite=1000] [--out=output/arquivo.json]'
+    'Uso: npm run fetch -- --cliente=HCL --inicio=2026-07-01 --fim=2026-07-31 [--maxPages=N] [--out=output/arquivo.json]'
   );
   process.exit(1);
 }
 
 const token = args.token || resolveClientToken(codigoCliente);
-const limite = Number(args.limite) || config.defaultLimite;
+const limite = REQUIRED_LIMITE; // a API exige exatamente 1000
+const maxPages = args.maxPages ? Number(args.maxPages) : undefined;
 
 console.log(`Buscando registros de ${codigoCliente} entre ${vencimentoIni} e ${vencimentoFim} (limite=${limite}/pagina)...`);
 
@@ -39,6 +40,7 @@ const result = await fetchAllRecords({
   vencimentoIni,
   vencimentoFim,
   limite,
+  ...(maxPages ? { maxPages } : {}),
   onPage: (info) => {
     if (info.aviso) {
       console.warn(`Aviso: ${info.aviso}`);

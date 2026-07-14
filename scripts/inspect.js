@@ -16,13 +16,14 @@ const args = parseArgs(process.argv.slice(2));
 
 const codigoCliente = args.cliente;
 if (!codigoCliente) {
-  console.error('Uso: npm run inspect -- --cliente=HCL --inicio=2026-07-01 --fim=2026-07-31 [--limite=5]');
+  console.error('Uso: npm run inspect -- --cliente=HCL --inicio=2026-07-01 --fim=2026-07-31');
   process.exit(1);
 }
 
 const vencimentoIni = args.inicio;
 const vencimentoFim = args.fim;
-const limite = args.limite || 5;
+// A API exige limite=1000 exato (qualquer outro valor retorna HTTP 400).
+const limite = 1000;
 const token = args.token || resolveClientToken(codigoCliente);
 
 async function callAndPrint(label, pagina) {

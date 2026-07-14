@@ -5,12 +5,22 @@
  *   - Docs:    https://tele.ongrentavel.com.br/scriptcase/app/ApiSTI/api_saude/
  *   - Produção: https://tele.ongrentavel.com.br/scriptcase/app/ApiSTI/blank/
  *
- * IMPORTANTE — schema ainda não confirmado contra uma resposta real (ambiente de
- * build sem acesso à rede externa no momento em que este código foi escrito).
- * Os nomes de campo abaixo (DATA_KEY_CANDIDATES / TOTAL_PAGES_KEY_CANDIDATES) são
- * tentativas cobrindo os padrões mais comuns. Assim que uma resposta real estiver
- * disponível (rode `npm run inspect`), confirme os nomes exatos e, se precisar,
- * fixe-os diretamente em vez de depender da detecção automática.
+ * Schema confirmado com uma chamada real em 2026-07-14 (cliente HCL). Resposta:
+ *   {
+ *     "status": true, "mensagem": "Consulta realizada com sucesso",
+ *     "versao_api": "...", "request_id": "...", "recurso": "doacoes",
+ *     "total": 1000, "total_registros": 56603, "total_paginas": 57,
+ *     "pagina": 1, "limite": 1000, "faixa_inicio": 1, "faixa_fim": 1000,
+ *     "dados": [ { contribuinte, tpdoac, vencimento, valor_previsto, pagamento,
+ *                  valor_pago, status_doacao, nome, tipodoador, genero,
+ *                  operador, operadorfixo, email, doc, rua, num, bairro,
+ *                  cidade, uf, cep, niver, telefone, cel1, cel2, ... } ]
+ *   }
+ * A API exige `limite` igual a 1000 (qualquer outro valor retorna HTTP 400 com
+ * status:false). Uma página além do total (ex.: pagina=99999) retorna HTTP 200
+ * com dados:[] e total_paginas correto, confirmando o comportamento documentado.
+ * As listas de candidatos abaixo continuam com sinônimos como rede de segurança
+ * caso a API mude nomes de campo no futuro.
  */
 
 const DATA_KEY_CANDIDATES = ['dados', 'data', 'registros', 'resultado', 'resultados', 'itens', 'rows'];
@@ -25,6 +35,9 @@ const TOTAL_PAGES_KEY_CANDIDATES = [
 ];
 const CURRENT_PAGE_KEY_CANDIDATES = ['pagina', 'page', 'pagina_atual', 'currentPage'];
 const TOTAL_RECORDS_KEY_CANDIDATES = ['total_registros', 'totalRegistros', 'total', 'total_rows', 'count'];
+
+// A API rejeita qualquer valor diferente de 1000 (HTTP 400, status:false).
+export const REQUIRED_LIMITE = 1000;
 
 export class ApiStiError extends Error {
   constructor(message, { status, body, cause } = {}) {
@@ -124,6 +137,23 @@ async function requestPageRaw({
 
   const text = await response.text();
 
+  let json;
+  try {
+    json = JSON.parse(text);
+  } catch {
+    json = null;
+  }
+
+  // A API sinaliza erros de negócio com status:false + mensagem, geralmente
+  // acompanhado de HTTP 400 — priorizamos a mensagem da API por ser mais
+  // descritiva do que o status HTTP genérico.
+  if (json && typeof json === 'object' && json.status === false) {
+    throw new ApiStiError(json.mensagem || `API retornou status:false (pagina=${pagina})`, {
+      status: response.status,
+      body: text,
+    });
+  }
+
   if (!response.ok) {
     throw new ApiStiError(`API respondeu HTTP ${response.status} para pagina=${pagina}`, {
       status: response.status,
@@ -131,10 +161,7 @@ async function requestPageRaw({
     });
   }
 
-  let json;
-  try {
-    json = JSON.parse(text);
-  } catch {
+  if (json === null) {
     throw new ApiStiError(
       `Resposta da API não é um JSON válido (pagina=${pagina}). Verifique token/codigo_cliente/parâmetros.`,
       { body: text }
@@ -192,12 +219,16 @@ export async function fetchAllRecords({
   codigoCliente,
   vencimentoIni,
   vencimentoFim,
-  limite = 1000,
+  limite = REQUIRED_LIMITE,
   maxPages = 500,
   delayMs = 150,
   fetchImpl,
   onPage,
 }) {
+  if (limite !== REQUIRED_LIMITE) {
+    throw new ApiStiError(`A API exige limite=${REQUIRED_LIMITE} (recebido: ${limite}).`);
+  }
+
   const requestOptions = { baseUrl, token, codigoCliente, vencimentoIni, vencimentoFim, limite, fetchImpl };
 
   const firstPage = await withRetry(() => fetchPage({ ...requestOptions, pagina: 1 }));
