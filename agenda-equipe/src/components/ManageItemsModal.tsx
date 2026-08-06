@@ -54,8 +54,9 @@ export default function ManageItemsModal({ title, items, onClose, onAdd, onUpdat
   const isFormOpen = creating || editingId !== null
 
   return (
-    <Modal title={title} onClose={onClose} width="max-w-lg">
-      <div className="max-h-64 space-y-1.5 overflow-y-auto pr-1">
+    <Modal title={`${title} (${items.length})`} onClose={onClose} width="max-w-lg">
+      <div className="relative">
+      <div className="max-h-96 space-y-1.5 overflow-y-auto pr-1">
         {items.length === 0 && <p className="py-4 text-center text-sm text-slate-400">Nada por aqui ainda.</p>}
         {items.map((item) => (
           <div
@@ -83,6 +84,10 @@ export default function ManageItemsModal({ title, items, onClose, onAdd, onUpdat
             </button>
           </div>
         ))}
+      </div>
+      {items.length > 5 && (
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 h-6 rounded-b-lg bg-gradient-to-t from-white to-transparent" />
+      )}
       </div>
 
       {isFormOpen ? (

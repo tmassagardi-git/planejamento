@@ -54,8 +54,9 @@ export default function ManageMembersModal({ members, onClose, onAdd, onUpdate, 
   const isFormOpen = creating || editingId !== null
 
   return (
-    <Modal title="Equipe" onClose={onClose} width="max-w-lg">
-      <div className="max-h-64 space-y-1.5 overflow-y-auto pr-1">
+    <Modal title={`Equipe (${sorted.length})`} onClose={onClose} width="max-w-lg">
+      <div className="relative">
+      <div className="max-h-96 space-y-1.5 overflow-y-auto pr-1">
         {sorted.map((m, idx) => (
           <div
             key={m.id}
@@ -89,6 +90,10 @@ export default function ManageMembersModal({ members, onClose, onAdd, onUpdate, 
             </div>
           </div>
         ))}
+      </div>
+      {sorted.length > 5 && (
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 h-6 rounded-b-lg bg-gradient-to-t from-white to-transparent" />
+      )}
       </div>
 
       {isFormOpen ? (
