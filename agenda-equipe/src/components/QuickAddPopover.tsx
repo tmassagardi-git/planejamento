@@ -1,11 +1,11 @@
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
-import { Building2, Video, X } from 'lucide-react'
+import { Building2, Video } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { useStore } from '../store'
 import type { Entry, Modality } from '../types'
 import { textColorFor } from '../utils/color'
-import ModalityIcon from './ModalityIcon'
+import EntryListItem from './EntryListItem'
 
 type Props = {
   memberId: string
@@ -20,7 +20,6 @@ export default function QuickAddPopover({ memberId, memberName, date, entries, a
   const clients = useStore((s) => s.clients)
   const categories = useStore((s) => s.categories)
   const addEntry = useStore((s) => s.addEntry)
-  const removeEntry = useStore((s) => s.removeEntry)
 
   const [time, setTime] = useState('')
   const [modality, setModality] = useState<Modality | undefined>(undefined)
@@ -44,9 +43,9 @@ export default function QuickAddPopover({ memberId, memberName, date, entries, a
 
   const dateLabel = format(new Date(date + 'T00:00:00'), "d 'de' MMMM", { locale: ptBR })
 
-  const popW = 300
+  const popW = 320
   const left = Math.min(Math.max(8, anchor.x - popW / 2), window.innerWidth - popW - 8)
-  const top = Math.min(anchor.y + 10, window.innerHeight - 460)
+  const top = Math.min(anchor.y + 10, window.innerHeight - 480)
 
   function pick(kind: 'client' | 'category', refId: string) {
     addEntry(memberId, date, { kind, refId, time: time || undefined, modality })
@@ -61,7 +60,7 @@ export default function QuickAddPopover({ memberId, memberName, date, entries, a
   return (
     <div
       ref={ref}
-      className="fixed z-40 w-[300px] animate-pop-in rounded-2xl border border-slate-200 bg-white p-3 shadow-pop"
+      className="fixed z-40 w-[320px] animate-pop-in rounded-2xl border border-slate-200 bg-white p-3 shadow-pop"
       style={{ left, top }}
     >
       <p className="mb-2 text-xs font-semibold text-slate-500">
@@ -69,20 +68,9 @@ export default function QuickAddPopover({ memberId, memberName, date, entries, a
       </p>
 
       {entries.length > 0 && (
-        <div className="mb-3 max-h-28 space-y-1 overflow-y-auto rounded-lg bg-slate-50 p-1.5">
+        <div className="mb-3 max-h-48 space-y-1 overflow-y-auto rounded-lg bg-slate-50 p-1.5">
           {entries.map((entry) => (
-            <div key={entry.id} className="flex items-center gap-1.5 rounded-md bg-white px-1.5 py-1 text-xs shadow-sm">
-              <span className="h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: entry.color }} />
-              {entry.time && <span className="shrink-0 tabular-nums font-semibold text-slate-500">{entry.time}</span>}
-              <span className="flex-1 truncate font-medium text-slate-700">{entry.label}</span>
-              <ModalityIcon modality={entry.modality} className="text-slate-400" />
-              <button
-                onClick={() => removeEntry(entry.id)}
-                className="shrink-0 rounded-full p-0.5 text-slate-400 hover:bg-rose-100 hover:text-rose-600"
-              >
-                <X size={11} />
-              </button>
-            </div>
+            <EntryListItem key={entry.id} entry={entry} />
           ))}
         </div>
       )}

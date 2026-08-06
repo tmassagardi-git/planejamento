@@ -34,8 +34,9 @@ type Actions = {
   removeCategory: (id: string) => void
 
   addEntry: (memberId: string, date: string, input: NewEntryInput) => void
-  updateEntryTime: (entryId: string, time: string | undefined) => void
+  updateEntry: (entryId: string, patch: Partial<Pick<Entry, 'time' | 'modality' | 'label' | 'detail'>>) => void
   moveEntry: (entryId: string, toMemberId: string, toDate: string) => void
+  duplicateEntry: (entryId: string, toDate: string, toMemberId?: string) => void
   removeEntry: (entryId: string) => void
 
   setHoliday: (date: string, label: string) => void
@@ -178,11 +179,11 @@ export const useStore = create<Store>()(
           return { entries: { ...s.entries, [entryId]: entry } }
         }),
 
-      updateEntryTime: (entryId, time) =>
+      updateEntry: (entryId, patch) =>
         set((s) => {
           const entry = s.entries[entryId]
           if (!entry) return {}
-          return { entries: { ...s.entries, [entryId]: { ...entry, time } } }
+          return { entries: { ...s.entries, [entryId]: { ...entry, ...patch } } }
         }),
 
       moveEntry: (entryId, toMemberId, toDate) =>
@@ -190,6 +191,15 @@ export const useStore = create<Store>()(
           const entry = s.entries[entryId]
           if (!entry) return {}
           return { entries: { ...s.entries, [entryId]: { ...entry, memberId: toMemberId, date: toDate } } }
+        }),
+
+      duplicateEntry: (entryId, toDate, toMemberId) =>
+        set((s) => {
+          const entry = s.entries[entryId]
+          if (!entry) return {}
+          const newId = id()
+          const copy: Entry = { ...entry, id: newId, date: toDate, memberId: toMemberId ?? entry.memberId }
+          return { entries: { ...s.entries, [newId]: copy } }
         }),
 
       removeEntry: (entryId) =>
