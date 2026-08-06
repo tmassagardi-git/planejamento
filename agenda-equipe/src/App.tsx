@@ -32,7 +32,7 @@ export default function App() {
   const updateCategory = useStore((s) => s.updateCategory)
   const removeCategory = useStore((s) => s.removeCategory)
 
-  const setFullDayEntry = useStore((s) => s.setFullDayEntry)
+  const addEntry = useStore((s) => s.addEntry)
   const moveEntry = useStore((s) => s.moveEntry)
   const entries = useStore((s) => s.entries)
 
@@ -51,9 +51,8 @@ export default function App() {
       const [, kind, refId] = parts
       const item = kind === 'client' ? byId.clientMap.get(refId) : byId.categoryMap.get(refId)
       if (item) setActiveDragLabel({ label: item.abbrev, color: item.color })
-    } else if (parts[0] === 'block') {
-      const [, memberId, date] = parts
-      const entry = entries[`${memberId}|${date}`]
+    } else if (parts[0] === 'entry') {
+      const entry = entries[parts[1]]
       if (entry) setActiveDragLabel({ label: entry.label, color: entry.color })
     }
   }
@@ -69,11 +68,12 @@ export default function App() {
 
     if (activeParts[0] === 'palette') {
       const [, kind, refId] = activeParts
-      setFullDayEntry(targetMemberId, targetDate, kind as 'client' | 'category', refId)
-    } else if (activeParts[0] === 'block') {
-      const [, sourceMemberId, sourceDate] = activeParts
-      if (sourceMemberId === targetMemberId && sourceDate === targetDate) return
-      moveEntry(sourceMemberId, sourceDate, targetMemberId, targetDate)
+      addEntry(targetMemberId, targetDate, { kind: kind as 'client' | 'category', refId })
+    } else if (activeParts[0] === 'entry') {
+      const entryId = activeParts[1]
+      const entry = entries[entryId]
+      if (entry && entry.memberId === targetMemberId && entry.date === targetDate) return
+      moveEntry(entryId, targetMemberId, targetDate)
     }
   }
 

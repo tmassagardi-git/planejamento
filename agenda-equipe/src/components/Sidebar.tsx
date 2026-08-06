@@ -45,7 +45,7 @@ export default function Sidebar({ onManageClients, onManageCategories, onManageM
         </button>
       </div>
 
-      <div className="flex-1 space-y-2 overflow-y-auto p-3">
+      <div className="flex-1 flex-wrap content-start gap-2 overflow-y-auto p-3 flex">
         {tab === 'clients' &&
           clients.map((c) => (
             <PaletteChip key={c.id} dragId={`palette:client:${c.id}`} label={c.abbrev} sublabel={c.name} color={c.color} />

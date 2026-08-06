@@ -9,9 +9,15 @@ function id() {
   return nanoid(8)
 }
 
-export function entryKey(memberId: string, date: string) {
-  return `${memberId}|${date}`
+export function cellEntries(entries: Record<string, Entry>, memberId: string, date: string): Entry[] {
+  return Object.values(entries)
+    .filter((e) => e.memberId === memberId && e.date === date)
+    .sort((a, b) => (a.time ?? '').localeCompare(b.time ?? '') || a.id.localeCompare(b.id))
 }
+
+type NewEntryInput =
+  | { kind: 'client' | 'category'; refId: string; time?: string }
+  | { kind: 'meeting'; label: string; detail?: string; time?: string }
 
 type Actions = {
   addMember: (name: string) => void
@@ -27,11 +33,10 @@ type Actions = {
   updateCategory: (id: string, patch: Partial<Omit<Category, 'id'>>) => void
   removeCategory: (id: string) => void
 
-  setFullDayEntry: (memberId: string, date: string, kind: 'client' | 'category', refId: string) => void
-  setMeetingEntry: (memberId: string, date: string, label: string, detail?: string, color?: string) => void
-  moveEntry: (fromMemberId: string, fromDate: string, toMemberId: string, toDate: string) => void
-  extendEntryRange: (memberId: string, fromDate: string, toDate: string) => void
-  clearEntry: (memberId: string, date: string) => void
+  addEntry: (memberId: string, date: string, input: NewEntryInput) => void
+  updateEntryTime: (entryId: string, time: string | undefined) => void
+  moveEntry: (entryId: string, toMemberId: string, toDate: string) => void
+  removeEntry: (entryId: string) => void
 
   setHoliday: (date: string, label: string) => void
   clearHoliday: (date: string) => void
@@ -140,66 +145,46 @@ export const useStore = create<Store>()(
           return { categories: s.categories.filter((c) => c.id !== categoryId), entries }
         }),
 
-      setFullDayEntry: (memberId, date, kind, refId) =>
+      addEntry: (memberId, date, input) =>
         set((s) => {
-          const { color, label } = refColor(s, kind, refId)
-          const key = entryKey(memberId, date)
-          const entry: Entry = { id: id(), memberId, date, kind, refId, label, color, isFullDay: true }
-          return { entries: { ...s.entries, [key]: entry } }
-        }),
-
-      setMeetingEntry: (memberId, date, label, detail, color) =>
-        set((s) => {
-          const key = entryKey(memberId, date)
-          const entry: Entry = {
-            id: id(),
-            memberId,
-            date,
-            kind: 'meeting',
-            label,
-            detail,
-            color: color ?? '#334155',
-            isFullDay: false,
+          const entryId = id()
+          let entry: Entry
+          if (input.kind === 'meeting') {
+            entry = {
+              id: entryId,
+              memberId,
+              date,
+              kind: 'meeting',
+              label: input.label,
+              detail: input.detail,
+              time: input.time,
+              color: '#334155',
+            }
+          } else {
+            const { color, label } = refColor(s, input.kind, input.refId)
+            entry = { id: entryId, memberId, date, kind: input.kind, refId: input.refId, label, time: input.time, color }
           }
-          return { entries: { ...s.entries, [key]: entry } }
+          return { entries: { ...s.entries, [entryId]: entry } }
         }),
 
-      moveEntry: (fromMemberId, fromDate, toMemberId, toDate) =>
+      updateEntryTime: (entryId, time) =>
         set((s) => {
-          const fromKey = entryKey(fromMemberId, fromDate)
-          const toKey = entryKey(toMemberId, toDate)
-          const entry = s.entries[fromKey]
+          const entry = s.entries[entryId]
           if (!entry) return {}
-          const entries = { ...s.entries }
-          delete entries[fromKey]
-          entries[toKey] = { ...entry, memberId: toMemberId, date: toDate }
-          return { entries }
+          return { entries: { ...s.entries, [entryId]: { ...entry, time } } }
         }),
 
-      extendEntryRange: (memberId, fromDate, toDate) =>
+      moveEntry: (entryId, toMemberId, toDate) =>
         set((s) => {
-          const fromKey = entryKey(memberId, fromDate)
-          const source = s.entries[fromKey]
-          if (!source) return {}
-          const start = fromDate < toDate ? fromDate : toDate
-          const end = fromDate < toDate ? toDate : fromDate
-          const entries = { ...s.entries }
-          let cursor = new Date(start + 'T00:00:00')
-          const endDate = new Date(end + 'T00:00:00')
-          while (cursor <= endDate) {
-            const iso = cursor.toISOString().slice(0, 10)
-            const key = entryKey(memberId, iso)
-            entries[key] = { ...source, id: iso === fromDate ? source.id : id(), date: iso }
-            cursor = new Date(cursor.getTime() + 86400000)
-          }
-          return { entries }
+          const entry = s.entries[entryId]
+          if (!entry) return {}
+          return { entries: { ...s.entries, [entryId]: { ...entry, memberId: toMemberId, date: toDate } } }
         }),
 
-      clearEntry: (memberId, date) =>
+      removeEntry: (entryId) =>
         set((s) => {
-          const key = entryKey(memberId, date)
           const entries = { ...s.entries }
-          delete entries[key]
+          delete entries[entryId]
           return { entries }
         }),
 
@@ -214,6 +199,6 @@ export const useStore = create<Store>()(
 
       resetToSeed: () => set(() => buildSeedState()),
     }),
-    { name: 'agenda-equipe-store' },
+    { name: 'agenda-equipe-store-v2' },
   ),
 )

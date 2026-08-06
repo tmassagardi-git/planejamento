@@ -1,34 +1,28 @@
 import { useDroppable } from '@dnd-kit/core'
 import { Plus } from 'lucide-react'
 import type { Entry } from '../types'
-import Block from './Block'
+import EntryRow from './EntryRow'
 
 type Props = {
   memberId: string
   date: string
-  entry?: Entry
-  mergeLeft: boolean
-  mergeRight: boolean
+  entries: Entry[]
   isWeekend: boolean
   isToday: boolean
   isHoliday: boolean
   onCellClick: (e: React.MouseEvent) => void
-  onRemove: () => void
-  onResizeStart: (e: React.PointerEvent) => void
+  onRemoveEntry: (entryId: string) => void
 }
 
 export default function DayCell({
   memberId,
   date,
-  entry,
-  mergeLeft,
-  mergeRight,
+  entries,
   isWeekend,
   isToday,
   isHoliday,
   onCellClick,
-  onRemove,
-  onResizeStart,
+  onRemoveEntry,
 }: Props) {
   const { setNodeRef, isOver } = useDroppable({ id: `cell:${memberId}:${date}` })
 
@@ -37,22 +31,23 @@ export default function DayCell({
       ref={setNodeRef}
       data-member={memberId}
       data-date={date}
-      className={`group relative h-11 border-b border-slate-100 py-0.5 ${mergeRight ? '' : 'border-r pr-0.5'} ${
-        mergeLeft ? '' : 'pl-0.5'
-      } ${isWeekend ? 'bg-slate-50/70' : 'bg-white'} ${isHoliday ? 'bg-rose-50' : ''} ${
-        isOver ? 'ring-2 ring-inset ring-indigo-400' : ''
-      } ${isToday ? 'outline outline-2 -outline-offset-2 outline-indigo-300' : ''}`}
+      className={`group relative flex min-h-[44px] flex-col gap-[2px] border-b border-r border-slate-100 p-0.5 ${
+        isWeekend ? 'bg-slate-50/70' : 'bg-white'
+      } ${isHoliday ? 'bg-rose-50' : ''} ${isOver ? 'ring-2 ring-inset ring-indigo-400' : ''} ${
+        isToday ? 'outline outline-2 -outline-offset-2 outline-indigo-300' : ''
+      }`}
     >
-      {entry ? (
-        <Block entry={entry} mergeLeft={mergeLeft} mergeRight={mergeRight} onClick={onCellClick} onRemove={onRemove} onResizeStart={onResizeStart} />
-      ) : (
-        <button
-          onClick={onCellClick}
-          className="flex h-full w-full items-center justify-center rounded-md text-slate-300 opacity-0 hover:bg-indigo-50 hover:text-indigo-400 group-hover:opacity-100"
-        >
-          <Plus size={14} />
-        </button>
-      )}
+      {entries.map((entry) => (
+        <EntryRow key={entry.id} entry={entry} onClick={onCellClick} onRemove={() => onRemoveEntry(entry.id)} />
+      ))}
+      <button
+        onClick={onCellClick}
+        className={`flex w-full items-center justify-center rounded-md text-slate-300 hover:bg-indigo-50 hover:text-indigo-400 ${
+          entries.length === 0 ? 'h-full opacity-0 group-hover:opacity-100' : 'h-3 opacity-0 group-hover:opacity-100'
+        }`}
+      >
+        <Plus size={12} />
+      </button>
     </div>
   )
 }

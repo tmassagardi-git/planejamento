@@ -16,7 +16,7 @@ export default function PaletteChip({ dragId, label, sublabel, color }: Props) {
       ref={setNodeRef}
       {...listeners}
       {...attributes}
-      className="flex cursor-grab items-center gap-2 rounded-xl px-3 py-2 text-sm font-semibold shadow-soft transition-opacity active:cursor-grabbing"
+      className="inline-flex w-fit cursor-grab items-center gap-2 rounded-xl px-3 py-2 text-sm font-semibold shadow-soft transition-opacity active:cursor-grabbing"
       style={{
         backgroundColor: color,
         color: textColorFor(color),

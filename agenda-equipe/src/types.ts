@@ -28,9 +28,9 @@ export type Entry = {
   kind: EntryKind
   refId?: string // client or category id (when kind is client/category)
   label: string // display text (abbrev, or free text for meetings)
-  detail?: string // optional longer note / time
+  detail?: string // optional note
+  time?: string // 'HH:MM' 24h, optional — entries without a time show first, then chronological order
   color: string
-  isFullDay: boolean
 }
 
 export type Holiday = {
@@ -42,6 +42,6 @@ export type ScheduleState = {
   members: Member[]
   clients: Client[]
   categories: Category[]
-  entries: Record<string, Entry> // key: `${memberId}|${date}`
+  entries: Record<string, Entry> // key: entry.id — several entries can share the same memberId+date
   holidays: Record<string, Holiday> // key: date
 }

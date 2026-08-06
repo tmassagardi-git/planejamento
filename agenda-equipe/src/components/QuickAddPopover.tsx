@@ -1,6 +1,6 @@
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
-import { Trash2 } from 'lucide-react'
+import { X } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { useStore } from '../store'
 import type { Entry } from '../types'
@@ -10,21 +10,19 @@ type Props = {
   memberId: string
   memberName: string
   date: string
-  entry?: Entry
+  entries: Entry[]
   anchor: { x: number; y: number }
   onClose: () => void
 }
 
-export default function QuickAddPopover({ memberId, memberName, date, entry, anchor, onClose }: Props) {
+export default function QuickAddPopover({ memberId, memberName, date, entries, anchor, onClose }: Props) {
   const clients = useStore((s) => s.clients)
   const categories = useStore((s) => s.categories)
-  const setFullDayEntry = useStore((s) => s.setFullDayEntry)
-  const setMeetingEntry = useStore((s) => s.setMeetingEntry)
-  const clearEntry = useStore((s) => s.clearEntry)
+  const addEntry = useStore((s) => s.addEntry)
+  const removeEntry = useStore((s) => s.removeEntry)
 
-  const [mode, setMode] = useState<'day' | 'meeting'>(entry && !entry.isFullDay ? 'meeting' : 'day')
-  const [label, setLabel] = useState(entry?.kind === 'meeting' ? entry.label : '')
-  const [detail, setDetail] = useState(entry?.detail ?? '')
+  const [time, setTime] = useState('')
+  const [customLabel, setCustomLabel] = useState('')
   const ref = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -44,125 +42,112 @@ export default function QuickAddPopover({ memberId, memberName, date, entry, anc
 
   const dateLabel = format(new Date(date + 'T00:00:00'), "d 'de' MMMM", { locale: ptBR })
 
-  const popW = 280
+  const popW = 300
   const left = Math.min(Math.max(8, anchor.x - popW / 2), window.innerWidth - popW - 8)
-  const top = Math.min(anchor.y + 10, window.innerHeight - 360)
+  const top = Math.min(anchor.y + 10, window.innerHeight - 460)
 
-  function pickFullDay(kind: 'client' | 'category', refId: string) {
-    setFullDayEntry(memberId, date, kind, refId)
-    onClose()
+  function pick(kind: 'client' | 'category', refId: string) {
+    addEntry(memberId, date, { kind, refId, time: time || undefined })
   }
 
-  function saveMeeting() {
-    if (!label.trim()) return
-    setMeetingEntry(memberId, date, label.trim(), detail.trim() || undefined)
-    onClose()
+  function addCustom() {
+    if (!customLabel.trim()) return
+    addEntry(memberId, date, { kind: 'meeting', label: customLabel.trim(), time: time || undefined })
+    setCustomLabel('')
   }
 
   return (
     <div
       ref={ref}
-      className="fixed z-40 w-[280px] animate-pop-in rounded-2xl border border-slate-200 bg-white p-3 shadow-pop"
+      className="fixed z-40 w-[300px] animate-pop-in rounded-2xl border border-slate-200 bg-white p-3 shadow-pop"
       style={{ left, top }}
     >
-      <div className="mb-2 flex items-center justify-between">
-        <p className="text-xs font-semibold text-slate-500">
-          {memberName} · <span className="capitalize">{dateLabel}</span>
-        </p>
-        {entry && (
-          <button
-            onClick={() => {
-              clearEntry(memberId, date)
-              onClose()
-            }}
-            className="flex items-center gap-1 rounded-lg px-1.5 py-0.5 text-xs font-medium text-rose-500 hover:bg-rose-50"
-          >
-            <Trash2 size={12} /> remover
-          </button>
+      <p className="mb-2 text-xs font-semibold text-slate-500">
+        {memberName} · <span className="capitalize">{dateLabel}</span>
+      </p>
+
+      {entries.length > 0 && (
+        <div className="mb-3 max-h-28 space-y-1 overflow-y-auto rounded-lg bg-slate-50 p-1.5">
+          {entries.map((entry) => (
+            <div key={entry.id} className="flex items-center gap-1.5 rounded-md bg-white px-1.5 py-1 text-xs shadow-sm">
+              <span className="h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: entry.color }} />
+              {entry.time && <span className="shrink-0 tabular-nums font-semibold text-slate-500">{entry.time}</span>}
+              <span className="flex-1 truncate font-medium text-slate-700">{entry.label}</span>
+              <button
+                onClick={() => removeEntry(entry.id)}
+                className="shrink-0 rounded-full p-0.5 text-slate-400 hover:bg-rose-100 hover:text-rose-600"
+              >
+                <X size={11} />
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <div className="mb-3">
+        <label className="mb-1 block text-[11px] font-semibold uppercase tracking-wide text-slate-400">
+          Horário (opcional)
+        </label>
+        <input
+          type="time"
+          value={time}
+          onChange={(e) => setTime(e.target.value)}
+          className="w-full rounded-lg border border-slate-200 px-2.5 py-1.5 text-sm tabular-nums focus:border-indigo-400 focus:outline-none"
+        />
+      </div>
+
+      <div className="max-h-40 space-y-2 overflow-y-auto pr-0.5">
+        {clients.length > 0 && (
+          <div>
+            <p className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-slate-400">Clientes</p>
+            <div className="flex flex-wrap gap-1.5">
+              {clients.map((c) => (
+                <button
+                  key={c.id}
+                  onClick={() => pick('client', c.id)}
+                  className="rounded-lg px-2 py-1 text-xs font-bold shadow-soft transition-transform hover:scale-105"
+                  style={{ backgroundColor: c.color, color: textColorFor(c.color) }}
+                >
+                  {c.abbrev}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+        {categories.length > 0 && (
+          <div>
+            <p className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-slate-400">Outros</p>
+            <div className="flex flex-wrap gap-1.5">
+              {categories.map((c) => (
+                <button
+                  key={c.id}
+                  onClick={() => pick('category', c.id)}
+                  className="rounded-lg px-2 py-1 text-xs font-bold shadow-soft transition-transform hover:scale-105"
+                  style={{ backgroundColor: c.color, color: textColorFor(c.color) }}
+                >
+                  {c.abbrev}
+                </button>
+              ))}
+            </div>
+          </div>
         )}
       </div>
 
-      <div className="mb-2 flex gap-1 rounded-lg bg-slate-100 p-0.5">
+      <div className="mt-3 flex gap-1.5 border-t border-slate-100 pt-3">
+        <input
+          value={customLabel}
+          onChange={(e) => setCustomLabel(e.target.value)}
+          placeholder="Outro texto livre..."
+          className="min-w-0 flex-1 rounded-lg border border-slate-200 px-2.5 py-1.5 text-sm focus:border-indigo-400 focus:outline-none"
+          onKeyDown={(e) => e.key === 'Enter' && addCustom()}
+        />
         <button
-          onClick={() => setMode('day')}
-          className={`flex-1 rounded-md px-2 py-1 text-xs font-semibold ${
-            mode === 'day' ? 'bg-white text-indigo-600 shadow-soft' : 'text-slate-500'
-          }`}
+          onClick={addCustom}
+          className="shrink-0 rounded-lg bg-indigo-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-indigo-700"
         >
-          Dia todo
-        </button>
-        <button
-          onClick={() => setMode('meeting')}
-          className={`flex-1 rounded-md px-2 py-1 text-xs font-semibold ${
-            mode === 'meeting' ? 'bg-white text-indigo-600 shadow-soft' : 'text-slate-500'
-          }`}
-        >
-          Reunião
+          Adicionar
         </button>
       </div>
-
-      {mode === 'day' ? (
-        <div className="max-h-52 space-y-2 overflow-y-auto pr-0.5">
-          {clients.length > 0 && (
-            <div>
-              <p className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-slate-400">Clientes</p>
-              <div className="flex flex-wrap gap-1.5">
-                {clients.map((c) => (
-                  <button
-                    key={c.id}
-                    onClick={() => pickFullDay('client', c.id)}
-                    className="rounded-lg px-2 py-1 text-xs font-bold shadow-soft transition-transform hover:scale-105"
-                    style={{ backgroundColor: c.color, color: textColorFor(c.color) }}
-                  >
-                    {c.abbrev}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-          {categories.length > 0 && (
-            <div>
-              <p className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-slate-400">Outros</p>
-              <div className="flex flex-wrap gap-1.5">
-                {categories.map((c) => (
-                  <button
-                    key={c.id}
-                    onClick={() => pickFullDay('category', c.id)}
-                    className="rounded-lg px-2 py-1 text-xs font-bold shadow-soft transition-transform hover:scale-105"
-                    style={{ backgroundColor: c.color, color: textColorFor(c.color) }}
-                  >
-                    {c.abbrev}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
-      ) : (
-        <div className="space-y-2">
-          <input
-            autoFocus
-            value={label}
-            onChange={(e) => setLabel(e.target.value)}
-            placeholder="Ex: Call 10h com fulano"
-            className="w-full rounded-lg border border-slate-200 px-2.5 py-1.5 text-sm focus:border-indigo-400 focus:outline-none"
-            onKeyDown={(e) => e.key === 'Enter' && saveMeeting()}
-          />
-          <input
-            value={detail}
-            onChange={(e) => setDetail(e.target.value)}
-            placeholder="Detalhe / horário (opcional)"
-            className="w-full rounded-lg border border-slate-200 px-2.5 py-1.5 text-sm focus:border-indigo-400 focus:outline-none"
-            onKeyDown={(e) => e.key === 'Enter' && saveMeeting()}
-          />
-          <button
-            onClick={saveMeeting}
-            className="w-full rounded-lg bg-indigo-600 py-1.5 text-sm font-semibold text-white hover:bg-indigo-700"
-          >
-            Salvar reunião
-          </button>
-        </div>
-      )}
     </div>
   )
 }

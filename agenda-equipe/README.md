@@ -6,9 +6,9 @@ Aplicação web para visualizar e organizar a agenda de toda a equipe de consult
 
 - **Grade mensal**: uma linha por consultor, uma coluna por dia — a equipe inteira visível de uma vez, com navegação entre meses.
 - **Arrastar para agendar**: arraste um cliente (ou item da aba "Outros") da barra lateral direto para o dia de um consultor.
-- **Dia todo ou reunião pontual**: cada dia de cada consultor comporta ou um bloco de dia inteiro (colorido, ocupando a célula) ou uma reunião pontual (pílula com horário/nota) — nunca os dois ao mesmo tempo, replicando a lógica da planilha original.
-- **Esticar para vários dias**: passe o mouse na borda direita de um bloco de dia inteiro e arraste para estender o mesmo cliente por vários dias consecutivos (os dias aparecem mesclados visualmente, como uma célula única).
-- **Mover blocos**: arraste um bloco já colocado para outro dia (ou outro consultor).
+- **Vários clientes por dia**: cada dia de cada consultor comporta uma lista de itens (clientes, categorias ou texto livre), cada um com horário opcional — a lista aparece sempre ordenada por horário (itens sem horário aparecem primeiro).
+- **Horário por item**: ao clicar num dia, dá para definir o horário antes de escolher o cliente/categoria, ou adicionar um texto livre com horário.
+- **Mover itens**: arraste um item já colocado para outro dia (ou outro consultor).
 - **Além de clientes**: cadastre categorias livres (Feriado, Particular, Viagem, Interno, Evento, ou qualquer outra) com cor própria.
 - **Feriados**: clique no cabeçalho de um dia para marcar (ou remover) um feriado — destaca a coluna inteira.
 - **Gerenciamento**: modais para adicionar/editar/remover clientes, categorias e membros da equipe (com cor e reordenação).
