@@ -1,5 +1,6 @@
 import { DndContext, DragOverlay, PointerSensor, useSensor, useSensors, type DragEndEvent, type DragStartEvent } from '@dnd-kit/core'
-import { useMemo, useState } from 'react'
+import { CalendarHeart, WifiOff } from 'lucide-react'
+import { useEffect, useMemo, useState } from 'react'
 import CalendarGrid from './components/CalendarGrid'
 import Header from './components/Header'
 import ManageItemsModal from './components/ManageItemsModal'
@@ -15,6 +16,14 @@ export default function App() {
   const [month, setMonth] = useState(new Date())
   const [modal, setModal] = useState<ModalName>(null)
   const [activeDragLabel, setActiveDragLabel] = useState<{ label: string; color: string } | null>(null)
+
+  const loading = useStore((s) => s.loading)
+  const syncError = useStore((s) => s.syncError)
+  const initialize = useStore((s) => s.initialize)
+
+  useEffect(() => {
+    initialize()
+  }, [initialize])
 
   const clients = useStore((s) => s.clients)
   const categories = useStore((s) => s.categories)
@@ -78,6 +87,24 @@ export default function App() {
       if (entry && entry.memberId === targetMemberId && entry.date === targetDate) return
       moveEntry(entryId, targetMemberId, targetDate)
     }
+  }
+
+  if (loading) {
+    return (
+      <div className="flex h-screen flex-col items-center justify-center gap-3 bg-slate-50 text-slate-400">
+        <CalendarHeart className="animate-pulse text-indigo-400" size={40} />
+        <p className="text-sm font-medium">Carregando agenda compartilhada...</p>
+      </div>
+    )
+  }
+
+  if (syncError) {
+    return (
+      <div className="flex h-screen flex-col items-center justify-center gap-3 bg-slate-50 px-6 text-center text-slate-500">
+        <WifiOff className="text-rose-400" size={40} />
+        <p className="max-w-sm text-sm font-medium">{syncError}</p>
+      </div>
+    )
   }
 
   return (
