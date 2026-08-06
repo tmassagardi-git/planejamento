@@ -1,11 +1,11 @@
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
-import { Building2, Video } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { useStore } from '../store'
 import type { Entry, Modality } from '../types'
 import { textColorFor } from '../utils/color'
 import EntryListItem from './EntryListItem'
+import ScheduleFields from './ScheduleFields'
 
 type Props = {
   memberId: string
@@ -21,8 +21,13 @@ export default function QuickAddPopover({ memberId, memberName, date, entries, a
   const categories = useStore((s) => s.categories)
   const addEntry = useStore((s) => s.addEntry)
 
+  const [allDay, setAllDay] = useState(true)
   const [time, setTime] = useState('')
+  const [endTime, setEndTime] = useState('')
   const [modality, setModality] = useState<Modality | undefined>(undefined)
+  const [travelConfirmed, setTravelConfirmed] = useState(false)
+  const [notes, setNotes] = useState('')
+  const [link, setLink] = useState('')
   const [customLabel, setCustomLabel] = useState('')
   const ref = useRef<HTMLDivElement>(null)
 
@@ -45,23 +50,41 @@ export default function QuickAddPopover({ memberId, memberName, date, entries, a
 
   const popW = 320
   const left = Math.min(Math.max(8, anchor.x - popW / 2), window.innerWidth - popW - 8)
-  const top = Math.min(anchor.y + 10, window.innerHeight - 480)
+  const top = Math.max(8, Math.min(anchor.y + 10, window.innerHeight - 8))
+  const maxHeight = window.innerHeight - top - 16
+
+  const schedule = {
+    allDay,
+    time: time || undefined,
+    endTime: endTime || undefined,
+    modality,
+    travelConfirmed,
+    notes: notes.trim() || undefined,
+    link: link.trim() || undefined,
+  }
+
+  function afterAdd() {
+    setNotes('')
+    setLink('')
+  }
 
   function pick(kind: 'client' | 'category', refId: string) {
-    addEntry(memberId, date, { kind, refId, time: time || undefined, modality })
+    addEntry(memberId, date, { kind, refId, ...schedule })
+    afterAdd()
   }
 
   function addCustom() {
     if (!customLabel.trim()) return
-    addEntry(memberId, date, { kind: 'meeting', label: customLabel.trim(), time: time || undefined, modality })
+    addEntry(memberId, date, { kind: 'meeting', label: customLabel.trim(), ...schedule })
     setCustomLabel('')
+    afterAdd()
   }
 
   return (
     <div
       ref={ref}
-      className="fixed z-40 w-[320px] animate-pop-in rounded-2xl border border-slate-200 bg-white p-3 shadow-pop"
-      style={{ left, top }}
+      className="fixed z-40 w-[320px] animate-pop-in overflow-y-auto rounded-2xl border border-slate-200 bg-white p-3 shadow-pop"
+      style={{ left, top, maxHeight }}
     >
       <p className="mb-2 text-xs font-semibold text-slate-500">
         {memberName} · <span className="capitalize">{dateLabel}</span>
@@ -75,45 +98,23 @@ export default function QuickAddPopover({ memberId, memberName, date, entries, a
         </div>
       )}
 
-      <div className="mb-3 flex gap-2">
-        <div className="flex-1">
-          <label className="mb-1 block text-[11px] font-semibold uppercase tracking-wide text-slate-400">
-            Horário (opcional)
-          </label>
-          <input
-            type="time"
-            value={time}
-            onChange={(e) => setTime(e.target.value)}
-            className="w-full rounded-lg border border-slate-200 px-2.5 py-1.5 text-sm tabular-nums focus:border-indigo-400 focus:outline-none"
-          />
-        </div>
-        <div>
-          <label className="mb-1 block text-[11px] font-semibold uppercase tracking-wide text-slate-400">
-            Formato
-          </label>
-          <div className="flex gap-1 rounded-lg bg-slate-100 p-0.5">
-            <button
-              type="button"
-              title="Presencial"
-              onClick={() => setModality((m) => (m === 'presencial' ? undefined : 'presencial'))}
-              className={`rounded-md p-[7px] ${
-                modality === 'presencial' ? 'bg-white text-indigo-600 shadow-soft' : 'text-slate-400 hover:text-slate-600'
-              }`}
-            >
-              <Building2 size={16} />
-            </button>
-            <button
-              type="button"
-              title="Online"
-              onClick={() => setModality((m) => (m === 'online' ? undefined : 'online'))}
-              className={`rounded-md p-[7px] ${
-                modality === 'online' ? 'bg-white text-indigo-600 shadow-soft' : 'text-slate-400 hover:text-slate-600'
-              }`}
-            >
-              <Video size={16} />
-            </button>
-          </div>
-        </div>
+      <div className="mb-3 border-b border-slate-100 pb-3">
+        <ScheduleFields
+          allDay={allDay}
+          onAllDayChange={setAllDay}
+          time={time}
+          onTimeChange={setTime}
+          endTime={endTime}
+          onEndTimeChange={setEndTime}
+          modality={modality}
+          onModalityChange={setModality}
+          travelConfirmed={travelConfirmed}
+          onTravelConfirmedChange={setTravelConfirmed}
+          notes={notes}
+          onNotesChange={setNotes}
+          link={link}
+          onLinkChange={setLink}
+        />
       </div>
 
       <div className="max-h-40 space-y-2 overflow-y-auto pr-0.5">

@@ -30,9 +30,13 @@ export type Entry = {
   kind: EntryKind
   refId?: string // client or category id (when kind is client/category)
   label: string // display text (abbrev, or free text for meetings)
-  detail?: string // optional note
-  time?: string // 'HH:MM' 24h, optional — entries without a time show first, then chronological order
+  allDay: boolean // true = "dia todo" (no specific time); false = scheduled with a time
+  time?: string // 'HH:MM' 24h — start time, only when !allDay
+  endTime?: string // 'HH:MM' 24h — optional end time, only when !allDay
   modality?: Modality // optional — shows an icon next to the label
+  travelConfirmed?: boolean // only meaningful when modality === 'presencial' — flight/lodging bookings confirmed
+  notes?: string // optional free-text note, shown on hover
+  link?: string // optional meeting URL
   color: string
 }
 

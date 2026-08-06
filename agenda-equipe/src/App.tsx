@@ -4,6 +4,7 @@ import CalendarGrid from './components/CalendarGrid'
 import Header from './components/Header'
 import ManageItemsModal from './components/ManageItemsModal'
 import ManageMembersModal from './components/ManageMembersModal'
+import MonthSummary from './components/MonthSummary'
 import Sidebar from './components/Sidebar'
 import { useStore } from './store'
 import { textColorFor } from './utils/color'
@@ -68,7 +69,7 @@ export default function App() {
 
     if (activeParts[0] === 'palette') {
       const [, kind, refId] = activeParts
-      addEntry(targetMemberId, targetDate, { kind: kind as 'client' | 'category', refId })
+      addEntry(targetMemberId, targetDate, { kind: kind as 'client' | 'category', refId, allDay: true })
     } else if (activeParts[0] === 'entry') {
       const entryId = activeParts[1]
       const entry = entries[entryId]
@@ -89,6 +90,7 @@ export default function App() {
           <div className="flex flex-1 flex-col overflow-hidden">
             <Header month={month} onChangeMonth={setMonth} />
             <CalendarGrid month={month} />
+            <MonthSummary month={month} />
           </div>
         </div>
       </div>

@@ -9,15 +9,27 @@ function id() {
   return nanoid(8)
 }
 
+function sortKey(e: Entry): string {
+  return e.allDay ? '' : e.time ?? '99:99'
+}
+
 export function cellEntries(entries: Record<string, Entry>, memberId: string, date: string): Entry[] {
   return Object.values(entries)
     .filter((e) => e.memberId === memberId && e.date === date)
-    .sort((a, b) => (a.time ?? '').localeCompare(b.time ?? '') || a.id.localeCompare(b.id))
+    .sort((a, b) => sortKey(a).localeCompare(sortKey(b)) || a.id.localeCompare(b.id))
 }
 
-type NewEntryInput =
-  | { kind: 'client' | 'category'; refId: string; time?: string; modality?: Modality }
-  | { kind: 'meeting'; label: string; detail?: string; time?: string; modality?: Modality }
+type ScheduleInput = {
+  allDay: boolean
+  time?: string
+  endTime?: string
+  modality?: Modality
+  travelConfirmed?: boolean
+  notes?: string
+  link?: string
+}
+
+type NewEntryInput = ScheduleInput & ({ kind: 'client' | 'category'; refId: string } | { kind: 'meeting'; label: string })
 
 type Actions = {
   addMember: (name: string) => void
@@ -34,7 +46,12 @@ type Actions = {
   removeCategory: (id: string) => void
 
   addEntry: (memberId: string, date: string, input: NewEntryInput) => void
-  updateEntry: (entryId: string, patch: Partial<Pick<Entry, 'time' | 'modality' | 'label' | 'detail'>>) => void
+  updateEntry: (
+    entryId: string,
+    patch: Partial<
+      Pick<Entry, 'time' | 'endTime' | 'allDay' | 'modality' | 'travelConfirmed' | 'label' | 'notes' | 'link'>
+    >,
+  ) => void
   moveEntry: (entryId: string, toMemberId: string, toDate: string) => void
   duplicateEntry: (entryId: string, toDate: string, toMemberId?: string) => void
   removeEntry: (entryId: string) => void
@@ -149,32 +166,21 @@ export const useStore = create<Store>()(
       addEntry: (memberId, date, input) =>
         set((s) => {
           const entryId = id()
+          const schedule = {
+            allDay: input.allDay,
+            time: input.allDay ? undefined : input.time,
+            endTime: input.allDay ? undefined : input.endTime,
+            modality: input.modality,
+            travelConfirmed: input.modality === 'presencial' ? input.travelConfirmed : undefined,
+            notes: input.notes,
+            link: input.link,
+          }
           let entry: Entry
           if (input.kind === 'meeting') {
-            entry = {
-              id: entryId,
-              memberId,
-              date,
-              kind: 'meeting',
-              label: input.label,
-              detail: input.detail,
-              time: input.time,
-              modality: input.modality,
-              color: '#334155',
-            }
+            entry = { id: entryId, memberId, date, kind: 'meeting', label: input.label, color: '#334155', ...schedule }
           } else {
             const { color, label } = refColor(s, input.kind, input.refId)
-            entry = {
-              id: entryId,
-              memberId,
-              date,
-              kind: input.kind,
-              refId: input.refId,
-              label,
-              time: input.time,
-              modality: input.modality,
-              color,
-            }
+            entry = { id: entryId, memberId, date, kind: input.kind, refId: input.refId, label, color, ...schedule }
           }
           return { entries: { ...s.entries, [entryId]: entry } }
         }),
@@ -183,7 +189,15 @@ export const useStore = create<Store>()(
         set((s) => {
           const entry = s.entries[entryId]
           if (!entry) return {}
-          return { entries: { ...s.entries, [entryId]: { ...entry, ...patch } } }
+          const merged = { ...entry, ...patch }
+          if (merged.allDay) {
+            merged.time = undefined
+            merged.endTime = undefined
+          }
+          if (merged.modality !== 'presencial') {
+            merged.travelConfirmed = undefined
+          }
+          return { entries: { ...s.entries, [entryId]: merged } }
         }),
 
       moveEntry: (entryId, toMemberId, toDate) =>
