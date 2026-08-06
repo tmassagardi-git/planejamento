@@ -13,7 +13,7 @@ const memberSeed: Array<Omit<Member, 'id' | 'order'>> = [
   { name: 'Milena', color: '#F59E0B' },
 ]
 
-const clientSeed: Array<Omit<Client, 'id'>> = [
+const clientSeed: Array<Omit<Client, 'id' | 'order'>> = [
   { name: 'APAE Santo André', abbrev: 'APAE SA', color: PALETTE[0] },
   { name: 'APAE Sorocaba', abbrev: 'SRC', color: PALETTE[1] },
   { name: 'Instituto do Câncer Dr. Arnaldo', abbrev: 'Dr.A', color: PALETTE[2] },
@@ -25,7 +25,7 @@ const clientSeed: Array<Omit<Client, 'id'>> = [
   { name: 'Instituto Terra', abbrev: 'IT', color: PALETTE[8] },
 ]
 
-const categorySeed: Array<Omit<Category, 'id'>> = [
+const categorySeed: Array<Omit<Category, 'id' | 'order'>> = [
   { name: 'Particular', abbrev: 'Particular', color: '#64748B' },
   { name: 'Feriado', abbrev: 'Feriado', color: '#EF4444' },
   { name: 'Viagem', abbrev: 'Viagem', color: '#0EA5E9' },
@@ -35,8 +35,8 @@ const categorySeed: Array<Omit<Category, 'id'>> = [
 
 export function buildSeedState(): ScheduleState {
   const members: Member[] = memberSeed.map((m, i) => ({ ...m, id: id(), order: i }))
-  const clients: Client[] = clientSeed.map((c) => ({ ...c, id: id() }))
-  const categories: Category[] = categorySeed.map((c) => ({ ...c, id: id() }))
+  const clients: Client[] = clientSeed.map((c, i) => ({ ...c, id: id(), order: i }))
+  const categories: Category[] = categorySeed.map((c, i) => ({ ...c, id: id(), order: i }))
 
   return {
     members,

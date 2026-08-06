@@ -12,8 +12,8 @@ type Props = {
 }
 
 export default function Sidebar({ onManageClients, onManageCategories, onManageMembers }: Props) {
-  const clients = useStore((s) => s.clients)
-  const categories = useStore((s) => s.categories)
+  const clients = useStore((s) => [...s.clients].sort((a, b) => a.order - b.order))
+  const categories = useStore((s) => [...s.categories].sort((a, b) => a.order - b.order))
   const [tab, setTab] = useState<Tab>('clients')
 
   return (

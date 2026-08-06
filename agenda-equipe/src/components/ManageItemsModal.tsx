@@ -1,4 +1,4 @@
-import { Pencil, Plus, Trash2 } from 'lucide-react'
+import { ArrowDown, ArrowUp, Pencil, Plus, Trash2 } from 'lucide-react'
 import { useState } from 'react'
 import type { Category, Client } from '../types'
 import { nextPaletteColor } from '../utils/color'
@@ -14,9 +14,11 @@ type Props = {
   onAdd: (name: string, abbrev: string, color: string) => void
   onUpdate: (id: string, patch: Partial<Omit<Item, 'id'>>) => void
   onRemove: (id: string) => void
+  onReorder: (orderedIds: string[]) => void
 }
 
-export default function ManageItemsModal({ title, items, onClose, onAdd, onUpdate, onRemove }: Props) {
+export default function ManageItemsModal({ title, items, onClose, onAdd, onUpdate, onRemove, onReorder }: Props) {
+  const sorted = [...items].sort((a, b) => a.order - b.order)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [creating, setCreating] = useState(false)
   const [name, setName] = useState('')
@@ -53,12 +55,20 @@ export default function ManageItemsModal({ title, items, onClose, onAdd, onUpdat
 
   const isFormOpen = creating || editingId !== null
 
+  function move(idx: number, dir: -1 | 1) {
+    const ids = sorted.map((i) => i.id)
+    const target = idx + dir
+    if (target < 0 || target >= ids.length) return
+    ;[ids[idx], ids[target]] = [ids[target], ids[idx]]
+    onReorder(ids)
+  }
+
   return (
-    <Modal title={`${title} (${items.length})`} onClose={onClose} width="max-w-lg">
+    <Modal title={`${title} (${sorted.length})`} onClose={onClose} width="max-w-lg">
       <div className="relative">
       <div className="max-h-96 space-y-1.5 overflow-y-auto pr-1">
-        {items.length === 0 && <p className="py-4 text-center text-sm text-slate-400">Nada por aqui ainda.</p>}
-        {items.map((item) => (
+        {sorted.length === 0 && <p className="py-4 text-center text-sm text-slate-400">Nada por aqui ainda.</p>}
+        {sorted.map((item, idx) => (
           <div
             key={item.id}
             className="group flex items-center gap-2.5 rounded-xl border border-slate-100 px-3 py-2 hover:bg-slate-50"
@@ -68,24 +78,40 @@ export default function ManageItemsModal({ title, items, onClose, onAdd, onUpdat
               <p className="truncate text-sm font-semibold text-slate-700">{item.name}</p>
               <p className="truncate text-xs text-slate-400">{item.abbrev}</p>
             </div>
-            <button
-              onClick={() => startEdit(item)}
-              className="rounded-lg p-1.5 text-slate-400 opacity-0 hover:bg-slate-200 hover:text-slate-600 group-hover:opacity-100"
-            >
-              <Pencil size={14} />
-            </button>
-            <button
-              onClick={() => {
-                if (confirm(`Remover "${item.name}"? Isso também limpa os blocos usados na agenda.`)) onRemove(item.id)
-              }}
-              className="rounded-lg p-1.5 text-slate-400 opacity-0 hover:bg-rose-100 hover:text-rose-600 group-hover:opacity-100"
-            >
-              <Trash2 size={14} />
-            </button>
+            <div className="flex opacity-0 group-hover:opacity-100">
+              <button
+                onClick={() => move(idx, -1)}
+                disabled={idx === 0}
+                className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-200 hover:text-slate-600 disabled:opacity-30"
+              >
+                <ArrowUp size={14} />
+              </button>
+              <button
+                onClick={() => move(idx, 1)}
+                disabled={idx === sorted.length - 1}
+                className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-200 hover:text-slate-600 disabled:opacity-30"
+              >
+                <ArrowDown size={14} />
+              </button>
+              <button
+                onClick={() => startEdit(item)}
+                className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-200 hover:text-slate-600"
+              >
+                <Pencil size={14} />
+              </button>
+              <button
+                onClick={() => {
+                  if (confirm(`Remover "${item.name}"? Isso também limpa os blocos usados na agenda.`)) onRemove(item.id)
+                }}
+                className="rounded-lg p-1.5 text-slate-400 hover:bg-rose-100 hover:text-rose-600"
+              >
+                <Trash2 size={14} />
+              </button>
+            </div>
           </div>
         ))}
       </div>
-      {items.length > 5 && (
+      {sorted.length > 5 && (
         <div className="pointer-events-none absolute inset-x-0 bottom-0 h-6 rounded-b-lg bg-gradient-to-t from-white to-transparent" />
       )}
       </div>

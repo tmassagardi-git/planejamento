@@ -17,8 +17,8 @@ type Props = {
 }
 
 export default function QuickAddPopover({ memberId, memberName, date, entries, anchor, onClose }: Props) {
-  const clients = useStore((s) => s.clients)
-  const categories = useStore((s) => s.categories)
+  const clients = useStore((s) => [...s.clients].sort((a, b) => a.order - b.order))
+  const categories = useStore((s) => [...s.categories].sort((a, b) => a.order - b.order))
   const addEntry = useStore((s) => s.addEntry)
 
   const [allDay, setAllDay] = useState(true)

@@ -28,10 +28,12 @@ export default function App() {
   const addClient = useStore((s) => s.addClient)
   const updateClient = useStore((s) => s.updateClient)
   const removeClient = useStore((s) => s.removeClient)
+  const reorderClients = useStore((s) => s.reorderClients)
 
   const addCategory = useStore((s) => s.addCategory)
   const updateCategory = useStore((s) => s.updateCategory)
   const removeCategory = useStore((s) => s.removeCategory)
+  const reorderCategories = useStore((s) => s.reorderCategories)
 
   const addEntry = useStore((s) => s.addEntry)
   const moveEntry = useStore((s) => s.moveEntry)
@@ -114,6 +116,7 @@ export default function App() {
           onAdd={addClient}
           onUpdate={updateClient}
           onRemove={removeClient}
+          onReorder={reorderClients}
         />
       )}
       {modal === 'categories' && (
@@ -124,6 +127,7 @@ export default function App() {
           onAdd={addCategory}
           onUpdate={updateCategory}
           onRemove={removeCategory}
+          onReorder={reorderCategories}
         />
       )}
       {modal === 'members' && (

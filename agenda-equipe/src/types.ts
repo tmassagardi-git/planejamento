@@ -10,6 +10,7 @@ export type Client = {
   name: string
   abbrev: string
   color: string
+  order: number
 }
 
 export type Category = {
@@ -17,6 +18,7 @@ export type Category = {
   name: string
   abbrev: string
   color: string
+  order: number
 }
 
 export type EntryKind = 'client' | 'category' | 'meeting'

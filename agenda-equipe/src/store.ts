@@ -40,10 +40,12 @@ type Actions = {
   addClient: (name: string, abbrev: string, color?: string) => void
   updateClient: (id: string, patch: Partial<Omit<Client, 'id'>>) => void
   removeClient: (id: string) => void
+  reorderClients: (orderedIds: string[]) => void
 
   addCategory: (name: string, abbrev: string, color?: string) => void
   updateCategory: (id: string, patch: Partial<Omit<Category, 'id'>>) => void
   removeCategory: (id: string) => void
+  reorderCategories: (orderedIds: string[]) => void
 
   addEntry: (memberId: string, date: string, input: NewEntryInput) => void
   updateEntry: (
@@ -109,7 +111,7 @@ export const useStore = create<Store>()(
         set((s) => ({
           clients: [
             ...s.clients,
-            { id: id(), name, abbrev, color: color ?? nextPaletteColor(s.clients.map((c) => c.color)) },
+            { id: id(), name, abbrev, color: color ?? nextPaletteColor(s.clients.map((c) => c.color)), order: s.clients.length },
           ],
         })),
       updateClient: (clientId, patch) =>
@@ -133,12 +135,27 @@ export const useStore = create<Store>()(
           }
           return { clients: s.clients.filter((c) => c.id !== clientId), entries }
         }),
+      reorderClients: (orderedIds) =>
+        set((s) => ({
+          clients: orderedIds
+            .map((oid, idx) => {
+              const c = s.clients.find((cc) => cc.id === oid)
+              return c ? { ...c, order: idx } : null
+            })
+            .filter((c): c is Client => !!c),
+        })),
 
       addCategory: (name, abbrev, color) =>
         set((s) => ({
           categories: [
             ...s.categories,
-            { id: id(), name, abbrev, color: color ?? nextPaletteColor(s.categories.map((c) => c.color)) },
+            {
+              id: id(),
+              name,
+              abbrev,
+              color: color ?? nextPaletteColor(s.categories.map((c) => c.color)),
+              order: s.categories.length,
+            },
           ],
         })),
       updateCategory: (categoryId, patch) =>
@@ -162,6 +179,15 @@ export const useStore = create<Store>()(
           }
           return { categories: s.categories.filter((c) => c.id !== categoryId), entries }
         }),
+      reorderCategories: (orderedIds) =>
+        set((s) => ({
+          categories: orderedIds
+            .map((oid, idx) => {
+              const c = s.categories.find((cc) => cc.id === oid)
+              return c ? { ...c, order: idx } : null
+            })
+            .filter((c): c is Category => !!c),
+        })),
 
       addEntry: (memberId, date, input) =>
         set((s) => {
@@ -234,6 +260,19 @@ export const useStore = create<Store>()(
 
       resetToSeed: () => set(() => buildSeedState()),
     }),
-    { name: 'agenda-equipe-store-v2' },
+    {
+      name: 'agenda-equipe-store-v2',
+      version: 1,
+      migrate: (persisted) => {
+        const state = persisted as ScheduleState
+        const backfillOrder = <T extends { order?: number }>(items: T[]): T[] =>
+          items.map((item, idx) => (typeof item.order === 'number' ? item : { ...item, order: idx }))
+        return {
+          ...state,
+          clients: backfillOrder(state.clients ?? []),
+          categories: backfillOrder(state.categories ?? []),
+        }
+      },
+    },
   ),
 )
