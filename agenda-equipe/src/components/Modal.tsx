@@ -15,7 +15,7 @@ export default function Modal({ title, onClose, children, width = 'max-w-md' }: 
       onClick={onClose}
     >
       <div
-        className={`w-full ${width} animate-pop-in rounded-2xl bg-white p-5 shadow-pop`}
+        className={`w-full ${width} max-h-[90vh] animate-pop-in overflow-y-auto rounded-2xl bg-white p-5 shadow-pop`}
         onClick={(e) => e.stopPropagation()}
       >
         <div className="mb-4 flex items-center justify-between">
