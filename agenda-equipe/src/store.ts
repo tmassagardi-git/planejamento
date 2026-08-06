@@ -2,7 +2,7 @@ import { nanoid } from 'nanoid'
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import { buildSeedState } from './data/seed'
-import type { Category, Client, Entry, Holiday, Member, ScheduleState } from './types'
+import type { Category, Client, Entry, Holiday, Member, Modality, ScheduleState } from './types'
 import { nextPaletteColor } from './utils/color'
 
 function id() {
@@ -16,8 +16,8 @@ export function cellEntries(entries: Record<string, Entry>, memberId: string, da
 }
 
 type NewEntryInput =
-  | { kind: 'client' | 'category'; refId: string; time?: string }
-  | { kind: 'meeting'; label: string; detail?: string; time?: string }
+  | { kind: 'client' | 'category'; refId: string; time?: string; modality?: Modality }
+  | { kind: 'meeting'; label: string; detail?: string; time?: string; modality?: Modality }
 
 type Actions = {
   addMember: (name: string) => void
@@ -158,11 +158,22 @@ export const useStore = create<Store>()(
               label: input.label,
               detail: input.detail,
               time: input.time,
+              modality: input.modality,
               color: '#334155',
             }
           } else {
             const { color, label } = refColor(s, input.kind, input.refId)
-            entry = { id: entryId, memberId, date, kind: input.kind, refId: input.refId, label, time: input.time, color }
+            entry = {
+              id: entryId,
+              memberId,
+              date,
+              kind: input.kind,
+              refId: input.refId,
+              label,
+              time: input.time,
+              modality: input.modality,
+              color,
+            }
           }
           return { entries: { ...s.entries, [entryId]: entry } }
         }),

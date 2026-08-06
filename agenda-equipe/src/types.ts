@@ -21,6 +21,8 @@ export type Category = {
 
 export type EntryKind = 'client' | 'category' | 'meeting'
 
+export type Modality = 'presencial' | 'online'
+
 export type Entry = {
   id: string
   memberId: string
@@ -30,6 +32,7 @@ export type Entry = {
   label: string // display text (abbrev, or free text for meetings)
   detail?: string // optional note
   time?: string // 'HH:MM' 24h, optional — entries without a time show first, then chronological order
+  modality?: Modality // optional — shows an icon next to the label
   color: string
 }
 

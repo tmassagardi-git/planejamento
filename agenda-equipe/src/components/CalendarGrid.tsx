@@ -13,7 +13,7 @@ type Props = {
 type SelectedCell = { memberId: string; date: string; anchor: { x: number; y: number } }
 
 const NAME_COL = 168
-const DAY_COL = 88
+const DAY_COL = 108
 
 export default function CalendarGrid({ month }: Props) {
   const members = useStore((s) => [...s.members].sort((a, b) => a.order - b.order))

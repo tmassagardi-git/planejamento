@@ -1,10 +1,11 @@
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
-import { X } from 'lucide-react'
+import { Building2, Video, X } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { useStore } from '../store'
-import type { Entry } from '../types'
+import type { Entry, Modality } from '../types'
 import { textColorFor } from '../utils/color'
+import ModalityIcon from './ModalityIcon'
 
 type Props = {
   memberId: string
@@ -22,6 +23,7 @@ export default function QuickAddPopover({ memberId, memberName, date, entries, a
   const removeEntry = useStore((s) => s.removeEntry)
 
   const [time, setTime] = useState('')
+  const [modality, setModality] = useState<Modality | undefined>(undefined)
   const [customLabel, setCustomLabel] = useState('')
   const ref = useRef<HTMLDivElement>(null)
 
@@ -47,12 +49,12 @@ export default function QuickAddPopover({ memberId, memberName, date, entries, a
   const top = Math.min(anchor.y + 10, window.innerHeight - 460)
 
   function pick(kind: 'client' | 'category', refId: string) {
-    addEntry(memberId, date, { kind, refId, time: time || undefined })
+    addEntry(memberId, date, { kind, refId, time: time || undefined, modality })
   }
 
   function addCustom() {
     if (!customLabel.trim()) return
-    addEntry(memberId, date, { kind: 'meeting', label: customLabel.trim(), time: time || undefined })
+    addEntry(memberId, date, { kind: 'meeting', label: customLabel.trim(), time: time || undefined, modality })
     setCustomLabel('')
   }
 
@@ -73,6 +75,7 @@ export default function QuickAddPopover({ memberId, memberName, date, entries, a
               <span className="h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: entry.color }} />
               {entry.time && <span className="shrink-0 tabular-nums font-semibold text-slate-500">{entry.time}</span>}
               <span className="flex-1 truncate font-medium text-slate-700">{entry.label}</span>
+              <ModalityIcon modality={entry.modality} className="text-slate-400" />
               <button
                 onClick={() => removeEntry(entry.id)}
                 className="shrink-0 rounded-full p-0.5 text-slate-400 hover:bg-rose-100 hover:text-rose-600"
@@ -84,16 +87,45 @@ export default function QuickAddPopover({ memberId, memberName, date, entries, a
         </div>
       )}
 
-      <div className="mb-3">
-        <label className="mb-1 block text-[11px] font-semibold uppercase tracking-wide text-slate-400">
-          Horário (opcional)
-        </label>
-        <input
-          type="time"
-          value={time}
-          onChange={(e) => setTime(e.target.value)}
-          className="w-full rounded-lg border border-slate-200 px-2.5 py-1.5 text-sm tabular-nums focus:border-indigo-400 focus:outline-none"
-        />
+      <div className="mb-3 flex gap-2">
+        <div className="flex-1">
+          <label className="mb-1 block text-[11px] font-semibold uppercase tracking-wide text-slate-400">
+            Horário (opcional)
+          </label>
+          <input
+            type="time"
+            value={time}
+            onChange={(e) => setTime(e.target.value)}
+            className="w-full rounded-lg border border-slate-200 px-2.5 py-1.5 text-sm tabular-nums focus:border-indigo-400 focus:outline-none"
+          />
+        </div>
+        <div>
+          <label className="mb-1 block text-[11px] font-semibold uppercase tracking-wide text-slate-400">
+            Formato
+          </label>
+          <div className="flex gap-1 rounded-lg bg-slate-100 p-0.5">
+            <button
+              type="button"
+              title="Presencial"
+              onClick={() => setModality((m) => (m === 'presencial' ? undefined : 'presencial'))}
+              className={`rounded-md p-[7px] ${
+                modality === 'presencial' ? 'bg-white text-indigo-600 shadow-soft' : 'text-slate-400 hover:text-slate-600'
+              }`}
+            >
+              <Building2 size={16} />
+            </button>
+            <button
+              type="button"
+              title="Online"
+              onClick={() => setModality((m) => (m === 'online' ? undefined : 'online'))}
+              className={`rounded-md p-[7px] ${
+                modality === 'online' ? 'bg-white text-indigo-600 shadow-soft' : 'text-slate-400 hover:text-slate-600'
+              }`}
+            >
+              <Video size={16} />
+            </button>
+          </div>
+        </div>
       </div>
 
       <div className="max-h-40 space-y-2 overflow-y-auto pr-0.5">

@@ -2,6 +2,7 @@ import { useDraggable } from '@dnd-kit/core'
 import { X } from 'lucide-react'
 import type { Entry } from '../types'
 import { withAlpha } from '../utils/color'
+import ModalityIcon from './ModalityIcon'
 
 type Props = {
   entry: Entry
@@ -25,9 +26,11 @@ export default function EntryRow({ entry, onClick, onRemove }: Props) {
         touchAction: 'none',
       }}
       onClick={onClick}
+      title={entry.time ? `${entry.time} · ${entry.label}` : entry.label}
     >
       {entry.time && <span className="shrink-0 tabular-nums text-slate-500">{entry.time}</span>}
       <span className="flex-1 truncate">{entry.label}</span>
+      <ModalityIcon modality={entry.modality} />
       <button
         onClick={(e) => {
           e.stopPropagation()
