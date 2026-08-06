@@ -1,7 +1,8 @@
-import { ArrowDown, ArrowUp, Pencil, Plus, Trash2 } from 'lucide-react'
+import { ArrowDown, ArrowUp, CalendarRange, Pencil, Plus, Trash2 } from 'lucide-react'
 import { useState } from 'react'
 import type { Category, Client } from '../types'
 import { nextPaletteColor } from '../utils/color'
+import { formatDateBR } from '../utils/date'
 import ColorPicker from './ColorPicker'
 import Modal from './Modal'
 
@@ -11,19 +12,29 @@ type Props = {
   title: string
   items: Item[]
   onClose: () => void
-  onAdd: (name: string, abbrev: string, color: string) => void
+  onAdd: (name: string, abbrev: string, color: string, range?: { startDate?: string; endDate?: string }) => void
   onUpdate: (id: string, patch: Partial<Omit<Item, 'id'>>) => void
   onRemove: (id: string) => void
   onReorder: (orderedIds: string[]) => void
+  dateRange?: boolean
 }
 
-export default function ManageItemsModal({ title, items, onClose, onAdd, onUpdate, onRemove, onReorder }: Props) {
+function rangeLabel(startDate?: string, endDate?: string): string | null {
+  if (!startDate && !endDate) return null
+  if (startDate && endDate) return `${formatDateBR(startDate)} – ${formatDateBR(endDate)}`
+  if (startDate) return `A partir de ${formatDateBR(startDate)}`
+  return `Até ${formatDateBR(endDate!)}`
+}
+
+export default function ManageItemsModal({ title, items, onClose, onAdd, onUpdate, onRemove, onReorder, dateRange }: Props) {
   const sorted = [...items].sort((a, b) => a.order - b.order)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [creating, setCreating] = useState(false)
   const [name, setName] = useState('')
   const [abbrev, setAbbrev] = useState('')
   const [color, setColor] = useState(() => nextPaletteColor(items.map((i) => i.color)))
+  const [startDate, setStartDate] = useState('')
+  const [endDate, setEndDate] = useState('')
 
   function startEdit(item: Item) {
     setEditingId(item.id)
@@ -31,6 +42,8 @@ export default function ManageItemsModal({ title, items, onClose, onAdd, onUpdat
     setName(item.name)
     setAbbrev(item.abbrev)
     setColor(item.color)
+    setStartDate((item as Client).startDate ?? '')
+    setEndDate((item as Client).endDate ?? '')
   }
 
   function startCreate() {
@@ -39,15 +52,18 @@ export default function ManageItemsModal({ title, items, onClose, onAdd, onUpdat
     setName('')
     setAbbrev('')
     setColor(nextPaletteColor(items.map((i) => i.color)))
+    setStartDate('')
+    setEndDate('')
   }
 
   function save() {
     if (!name.trim()) return
     const finalAbbrev = abbrev.trim() || name.trim().slice(0, 10)
+    const range = dateRange ? { startDate: startDate || undefined, endDate: endDate || undefined } : undefined
     if (editingId) {
-      onUpdate(editingId, { name: name.trim(), abbrev: finalAbbrev, color })
+      onUpdate(editingId, { name: name.trim(), abbrev: finalAbbrev, color, ...range })
     } else if (creating) {
-      onAdd(name.trim(), finalAbbrev, color)
+      onAdd(name.trim(), finalAbbrev, color, range)
     }
     setEditingId(null)
     setCreating(false)
@@ -77,6 +93,11 @@ export default function ManageItemsModal({ title, items, onClose, onAdd, onUpdat
             <div className="min-w-0 flex-1">
               <p className="truncate text-sm font-semibold text-slate-700">{item.name}</p>
               <p className="truncate text-xs text-slate-400">{item.abbrev}</p>
+              {dateRange && rangeLabel((item as Client).startDate, (item as Client).endDate) && (
+                <p className="flex items-center gap-1 truncate text-[11px] text-slate-400">
+                  <CalendarRange size={11} /> {rangeLabel((item as Client).startDate, (item as Client).endDate)}
+                </p>
+              )}
             </div>
             <div className="flex opacity-0 group-hover:opacity-100">
               <button
@@ -143,6 +164,28 @@ export default function ManageItemsModal({ title, items, onClose, onAdd, onUpdat
             <label className="mb-1 block text-xs font-medium text-slate-500">Cor</label>
             <ColorPicker value={color} onChange={setColor} />
           </div>
+          {dateRange && (
+            <div className="flex gap-2">
+              <div className="flex-1">
+                <label className="mb-1 block text-xs font-medium text-slate-500">Ativo a partir de (opcional)</label>
+                <input
+                  type="date"
+                  value={startDate}
+                  onChange={(e) => setStartDate(e.target.value)}
+                  className="w-full rounded-lg border border-slate-200 px-2.5 py-1.5 text-sm focus:border-indigo-400 focus:outline-none"
+                />
+              </div>
+              <div className="flex-1">
+                <label className="mb-1 block text-xs font-medium text-slate-500">Ativo até (opcional)</label>
+                <input
+                  type="date"
+                  value={endDate}
+                  onChange={(e) => setEndDate(e.target.value)}
+                  className="w-full rounded-lg border border-slate-200 px-2.5 py-1.5 text-sm focus:border-indigo-400 focus:outline-none"
+                />
+              </div>
+            </div>
+          )}
           <div className="flex justify-end gap-2 pt-1">
             <button
               onClick={() => {

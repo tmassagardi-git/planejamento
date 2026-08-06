@@ -31,13 +31,15 @@ type ScheduleInput = {
 
 type NewEntryInput = ScheduleInput & ({ kind: 'client' | 'category'; refId: string } | { kind: 'meeting'; label: string })
 
+type ActiveRange = { startDate?: string; endDate?: string }
+
 type Actions = {
-  addMember: (name: string) => void
+  addMember: (name: string, range?: ActiveRange) => void
   updateMember: (id: string, patch: Partial<Omit<Member, 'id'>>) => void
   removeMember: (id: string) => void
   reorderMembers: (orderedIds: string[]) => void
 
-  addClient: (name: string, abbrev: string, color?: string) => void
+  addClient: (name: string, abbrev: string, color?: string, range?: ActiveRange) => void
   updateClient: (id: string, patch: Partial<Omit<Client, 'id'>>) => void
   removeClient: (id: string) => void
   reorderClients: (orderedIds: string[]) => void
@@ -80,11 +82,18 @@ export const useStore = create<Store>()(
     (set, get) => ({
       ...buildSeedState(),
 
-      addMember: (name) =>
+      addMember: (name, range) =>
         set((s) => ({
           members: [
             ...s.members,
-            { id: id(), name, color: nextPaletteColor(s.members.map((m) => m.color)), order: s.members.length },
+            {
+              id: id(),
+              name,
+              color: nextPaletteColor(s.members.map((m) => m.color)),
+              order: s.members.length,
+              startDate: range?.startDate,
+              endDate: range?.endDate,
+            },
           ],
         })),
       updateMember: (memberId, patch) =>
@@ -107,11 +116,19 @@ export const useStore = create<Store>()(
             .filter((m): m is Member => !!m),
         })),
 
-      addClient: (name, abbrev, color) =>
+      addClient: (name, abbrev, color, range) =>
         set((s) => ({
           clients: [
             ...s.clients,
-            { id: id(), name, abbrev, color: color ?? nextPaletteColor(s.clients.map((c) => c.color)), order: s.clients.length },
+            {
+              id: id(),
+              name,
+              abbrev,
+              color: color ?? nextPaletteColor(s.clients.map((c) => c.color)),
+              order: s.clients.length,
+              startDate: range?.startDate,
+              endDate: range?.endDate,
+            },
           ],
         })),
       updateClient: (clientId, patch) =>

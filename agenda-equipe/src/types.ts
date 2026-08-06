@@ -3,6 +3,8 @@ export type Member = {
   name: string
   color: string
   order: number
+  startDate?: string // 'YYYY-MM-DD' — only shows in the calendar from this month on, if set
+  endDate?: string // 'YYYY-MM-DD' — stops showing in the calendar after this month, if set
 }
 
 export type Client = {
@@ -11,6 +13,8 @@ export type Client = {
   abbrev: string
   color: string
   order: number
+  startDate?: string // 'YYYY-MM-DD' — only shows in the sidebar/picker from this month on, if set
+  endDate?: string // 'YYYY-MM-DD' — stops showing in the sidebar/picker after this month, if set
 }
 
 export type Category = {

@@ -1,17 +1,25 @@
-import { ArrowDown, ArrowUp, Pencil, Plus, Trash2 } from 'lucide-react'
+import { ArrowDown, ArrowUp, CalendarRange, Pencil, Plus, Trash2 } from 'lucide-react'
 import { useState } from 'react'
 import type { Member } from '../types'
 import { nextPaletteColor } from '../utils/color'
+import { formatDateBR } from '../utils/date'
 import ColorPicker from './ColorPicker'
 import Modal from './Modal'
 
 type Props = {
   members: Member[]
   onClose: () => void
-  onAdd: (name: string) => void
+  onAdd: (name: string, range?: { startDate?: string; endDate?: string }) => void
   onUpdate: (id: string, patch: Partial<Omit<Member, 'id'>>) => void
   onRemove: (id: string) => void
   onReorder: (orderedIds: string[]) => void
+}
+
+function rangeLabel(startDate?: string, endDate?: string): string | null {
+  if (!startDate && !endDate) return null
+  if (startDate && endDate) return `${formatDateBR(startDate)} – ${formatDateBR(endDate)}`
+  if (startDate) return `A partir de ${formatDateBR(startDate)}`
+  return `Até ${formatDateBR(endDate!)}`
 }
 
 export default function ManageMembersModal({ members, onClose, onAdd, onUpdate, onRemove, onReorder }: Props) {
@@ -20,12 +28,16 @@ export default function ManageMembersModal({ members, onClose, onAdd, onUpdate, 
   const [creating, setCreating] = useState(false)
   const [name, setName] = useState('')
   const [color, setColor] = useState(() => nextPaletteColor(members.map((m) => m.color)))
+  const [startDate, setStartDate] = useState('')
+  const [endDate, setEndDate] = useState('')
 
   function startEdit(m: Member) {
     setEditingId(m.id)
     setCreating(false)
     setName(m.name)
     setColor(m.color)
+    setStartDate(m.startDate ?? '')
+    setEndDate(m.endDate ?? '')
   }
 
   function startCreate() {
@@ -33,12 +45,15 @@ export default function ManageMembersModal({ members, onClose, onAdd, onUpdate, 
     setCreating(true)
     setName('')
     setColor(nextPaletteColor(members.map((m) => m.color)))
+    setStartDate('')
+    setEndDate('')
   }
 
   function save() {
     if (!name.trim()) return
-    if (editingId) onUpdate(editingId, { name: name.trim(), color })
-    else if (creating) onAdd(name.trim())
+    const range = { startDate: startDate || undefined, endDate: endDate || undefined }
+    if (editingId) onUpdate(editingId, { name: name.trim(), color, ...range })
+    else if (creating) onAdd(name.trim(), range)
     setEditingId(null)
     setCreating(false)
   }
@@ -68,7 +83,14 @@ export default function ManageMembersModal({ members, onClose, onAdd, onUpdate, 
             >
               {m.name.charAt(0).toUpperCase()}
             </span>
-            <p className="flex-1 truncate text-sm font-semibold text-slate-700">{m.name}</p>
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-sm font-semibold text-slate-700">{m.name}</p>
+              {rangeLabel(m.startDate, m.endDate) && (
+                <p className="flex items-center gap-1 truncate text-[11px] text-slate-400">
+                  <CalendarRange size={11} /> {rangeLabel(m.startDate, m.endDate)}
+                </p>
+              )}
+            </div>
             <div className="flex opacity-0 group-hover:opacity-100">
               <button onClick={() => move(idx, -1)} disabled={idx === 0} className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-200 hover:text-slate-600 disabled:opacity-30">
                 <ArrowUp size={14} />
@@ -111,6 +133,26 @@ export default function ManageMembersModal({ members, onClose, onAdd, onUpdate, 
           <div>
             <label className="mb-1 block text-xs font-medium text-slate-500">Cor</label>
             <ColorPicker value={color} onChange={setColor} />
+          </div>
+          <div className="flex gap-2">
+            <div className="flex-1">
+              <label className="mb-1 block text-xs font-medium text-slate-500">Ativo a partir de (opcional)</label>
+              <input
+                type="date"
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+                className="w-full rounded-lg border border-slate-200 px-2.5 py-1.5 text-sm focus:border-indigo-400 focus:outline-none"
+              />
+            </div>
+            <div className="flex-1">
+              <label className="mb-1 block text-xs font-medium text-slate-500">Ativo até (opcional)</label>
+              <input
+                type="date"
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
+                className="w-full rounded-lg border border-slate-200 px-2.5 py-1.5 text-sm focus:border-indigo-400 focus:outline-none"
+              />
+            </div>
           </div>
           <div className="flex justify-end gap-2 pt-1">
             <button

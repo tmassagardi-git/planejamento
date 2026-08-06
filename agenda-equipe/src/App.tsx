@@ -85,6 +85,7 @@ export default function App() {
       <div className="flex h-screen flex-col">
         <div className="flex flex-1 overflow-hidden">
           <Sidebar
+            month={month}
             onManageClients={() => setModal('clients')}
             onManageCategories={() => setModal('categories')}
             onManageMembers={() => setModal('members')}
@@ -117,6 +118,7 @@ export default function App() {
           onUpdate={updateClient}
           onRemove={removeClient}
           onReorder={reorderClients}
+          dateRange
         />
       )}
       {modal === 'categories' && (

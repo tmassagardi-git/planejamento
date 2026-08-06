@@ -1,18 +1,21 @@
 import { CalendarHeart, Settings2, Users } from 'lucide-react'
 import { useState } from 'react'
 import { useStore } from '../store'
+import { isActiveInMonth } from '../utils/date'
 import PaletteChip from './PaletteChip'
 
 type Tab = 'clients' | 'categories'
 
 type Props = {
+  month: Date
   onManageClients: () => void
   onManageCategories: () => void
   onManageMembers: () => void
 }
 
-export default function Sidebar({ onManageClients, onManageCategories, onManageMembers }: Props) {
-  const clients = useStore((s) => [...s.clients].sort((a, b) => a.order - b.order))
+export default function Sidebar({ month, onManageClients, onManageCategories, onManageMembers }: Props) {
+  const allClients = useStore((s) => [...s.clients].sort((a, b) => a.order - b.order))
+  const clients = allClients.filter((c) => isActiveInMonth(c.startDate, c.endDate, month))
   const categories = useStore((s) => [...s.categories].sort((a, b) => a.order - b.order))
   const [tab, setTab] = useState<Tab>('clients')
 
@@ -54,8 +57,11 @@ export default function Sidebar({ onManageClients, onManageCategories, onManageM
           categories.map((c) => (
             <PaletteChip key={c.id} dragId={`palette:category:${c.id}`} label={c.abbrev} sublabel={c.name} color={c.color} />
           ))}
-        {tab === 'clients' && clients.length === 0 && (
+        {tab === 'clients' && clients.length === 0 && allClients.length === 0 && (
           <p className="px-1 text-sm text-slate-400">Nenhum cliente ainda. Use "Gerenciar clientes" abaixo.</p>
+        )}
+        {tab === 'clients' && clients.length === 0 && allClients.length > 0 && (
+          <p className="px-1 text-sm text-slate-400">Nenhum cliente ativo neste mês.</p>
         )}
         {tab === 'categories' && categories.length === 0 && (
           <p className="px-1 text-sm text-slate-400">Nenhuma categoria ainda.</p>

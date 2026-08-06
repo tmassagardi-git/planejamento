@@ -32,6 +32,18 @@ export function daysInMonth(monthDate: Date): Date[] {
   })
 }
 
+export function formatDateBR(iso: string): string {
+  return format(new Date(iso + 'T00:00:00'), 'dd/MM/yyyy')
+}
+
+export function isActiveInMonth(startDate: string | undefined, endDate: string | undefined, monthDate: Date): boolean {
+  const activeStart = startDate ?? '0000-01-01'
+  const activeEnd = endDate ?? '9999-12-31'
+  const monthStart = toISO(startOfMonth(monthDate))
+  const monthEnd = toISO(endOfMonth(monthDate))
+  return activeStart <= monthEnd && activeEnd >= monthStart
+}
+
 export function goToNextMonth(monthDate: Date): Date {
   return addMonths(monthDate, 1)
 }

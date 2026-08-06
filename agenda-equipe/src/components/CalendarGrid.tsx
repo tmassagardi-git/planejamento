@@ -2,7 +2,7 @@ import { CalendarOff, CalendarPlus } from 'lucide-react'
 import { useState } from 'react'
 import { cellEntries, useStore } from '../store'
 import type { Entry } from '../types'
-import { daysInMonth, isSameDay, isWeekend, toISO, weekdayShort } from '../utils/date'
+import { daysInMonth, isActiveInMonth, isSameDay, isWeekend, toISO, weekdayShort } from '../utils/date'
 import DayCell from './DayCell'
 import QuickAddPopover from './QuickAddPopover'
 
@@ -16,7 +16,8 @@ const NAME_COL = 168
 const DAY_COL = 108
 
 export default function CalendarGrid({ month }: Props) {
-  const members = useStore((s) => [...s.members].sort((a, b) => a.order - b.order))
+  const allMembers = useStore((s) => [...s.members].sort((a, b) => a.order - b.order))
+  const members = allMembers.filter((m) => isActiveInMonth(m.startDate, m.endDate, month))
   const entries = useStore((s) => s.entries)
   const holidays = useStore((s) => s.holidays)
   const setHoliday = useStore((s) => s.setHoliday)
@@ -85,9 +86,14 @@ export default function CalendarGrid({ month }: Props) {
           />
         ))}
 
-        {members.length === 0 && (
+        {members.length === 0 && allMembers.length === 0 && (
           <div className="col-span-full flex items-center justify-center gap-2 py-10 text-sm text-slate-400">
             <CalendarPlus size={16} /> Adicione pessoas da equipe para começar.
+          </div>
+        )}
+        {members.length === 0 && allMembers.length > 0 && (
+          <div className="col-span-full flex items-center justify-center gap-2 py-10 text-sm text-slate-400">
+            <CalendarPlus size={16} /> Nenhum membro da equipe ativo neste mês.
           </div>
         )}
       </div>

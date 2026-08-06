@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useStore } from '../store'
 import type { Entry, Modality } from '../types'
 import { textColorFor } from '../utils/color'
+import { isActiveInMonth } from '../utils/date'
 import EntryListItem from './EntryListItem'
 import ScheduleFields from './ScheduleFields'
 
@@ -17,7 +18,10 @@ type Props = {
 }
 
 export default function QuickAddPopover({ memberId, memberName, date, entries, anchor, onClose }: Props) {
-  const clients = useStore((s) => [...s.clients].sort((a, b) => a.order - b.order))
+  const cellMonth = new Date(date + 'T00:00:00')
+  const clients = useStore((s) =>
+    [...s.clients].sort((a, b) => a.order - b.order).filter((c) => isActiveInMonth(c.startDate, c.endDate, cellMonth)),
+  )
   const categories = useStore((s) => [...s.categories].sort((a, b) => a.order - b.order))
   const addEntry = useStore((s) => s.addEntry)
 
