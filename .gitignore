@@ -3,4 +3,7 @@ node_modules/
 config/clients.json
 output/*.json
 !output/.gitkeep
+data/*.db
+data/*.db-journal
+!data/.gitkeep
 *.log

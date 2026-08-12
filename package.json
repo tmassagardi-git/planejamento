@@ -3,13 +3,14 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "Integração com a API de Telemarketing (ApiSTI) da plataforma de doações, para alimentar os painéis do KairOS.",
+  "description": "Integração com a API de Telemarketing (ApiSTI) da plataforma de doações, para alimentar os painéis do KairOS, e sistema de controle de comissão do Projeto Empresa Amiga.",
   "engines": {
-    "node": ">=18"
+    "node": ">=22"
   },
   "scripts": {
     "test": "node --test",
     "inspect": "node scripts/inspect.js",
-    "fetch": "node scripts/fetch-client.js"
+    "fetch": "node scripts/fetch-client.js",
+    "comissao": "node scripts/serve.js"
   }
 }

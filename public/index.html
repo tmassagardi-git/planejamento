@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Controle de Comissão — Empresa Amiga</title>
+  <link rel="icon" href="data:," />
+  <link rel="stylesheet" href="/css/estilo.css" />
+</head>
+<body>
+  <header class="topo">
+    <h1>Controle de Comissão · Empresa Amiga</h1>
+    <nav>
+      <a href="/" class="ativo">Início</a>
+      <a href="/metas.html">Metas</a>
+      <a href="/lancamentos.html">Lançamentos &amp; Comissão</a>
+    </nav>
+  </header>
+  <main>
+    <div class="card">
+      <h2 style="margin-top:0">Bem-vindo(a)</h2>
+      <p>
+        Sistema de controle de comissão baseado na Política de Incentivo Mensal por Resultado do
+        Projeto Empresa Amiga. Patrocínios, editais e projetos incentivados são diluídos em 12
+        parcelas mensais (crédito futuro); doações do Empresa Amiga são lançadas uma única vez e
+        já entram provisionadas para os próximos 11 meses, já que o ciclo de doação é mensal.
+      </p>
+      <div class="grid-2">
+        <div class="card" style="margin-bottom:0">
+          <h3>Painel de Metas</h3>
+          <p class="muted">Cadastre captadores(as), defina metas mensais e ajuste as faixas de incentivo e os bônus de adimplência/renovação.</p>
+          <a href="/metas.html"><button>Abrir painel de Metas</button></a>
+        </div>
+        <div class="card" style="margin-bottom:0">
+          <h3>Painel de Lançamentos</h3>
+          <p class="muted">Lance doações (Empresa Amiga, patrocínio, editais, projetos incentivados) e acompanhe a comissão calculada do mês.</p>
+          <a href="/lancamentos.html"><button>Abrir painel de Lançamentos</button></a>
+        </div>
+      </div>
+    </div>
+    <div class="aviso">
+      <strong>Sobre o exemplo de cálculo do documento original:</strong> a fórmula implementada segue
+      literalmente o texto da política (base = acumulado Empresa Amiga + parcelas de 1/12 de
+      patrocínio/edital/projeto, com a alíquota definida pelo % de atingimento da meta). O exemplo
+      numérico do documento (4% sobre R$22.500) não fecha exatamente com a soma das 3 estratégias do
+      próprio exemplo (R$27.500) — ver <code>docs/comissao-empresa-amiga.md</code> para o detalhamento.
+    </div>
+  </main>
+</body>
+</html>
