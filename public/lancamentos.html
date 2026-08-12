@@ -1,0 +1,372 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Lançamentos &amp; Comissão — Controle de Comissão</title>
+  <link rel="icon" href="data:," />
+  <link rel="stylesheet" href="/css/estilo.css" />
+</head>
+<body>
+  <header class="topo">
+    <h1>Controle de Comissão · Empresa Amiga</h1>
+    <nav>
+      <a href="/">Início</a>
+      <a href="/metas.html">Metas</a>
+      <a href="/lancamentos.html" class="ativo">Lançamentos &amp; Comissão</a>
+    </nav>
+  </header>
+  <main>
+    <h2>Lançar captação</h2>
+    <div class="card">
+      <p class="muted">
+        <strong>Empresa Amiga</strong>: lance o valor mensal do(a) doador(a) — ele já entra
+        provisionado, sem dividir, nos próximos 11 meses além do mês atual (1ª parcela), pois o
+        ciclo é de doação mensal recorrente.<br />
+        <strong>Patrocínio / Edital / Projeto incentivado</strong>: lance o valor total captado —
+        ele é dividido por 12 e entra como crédito futuro no mês atual + próximos 11 meses.
+      </p>
+      <form id="form-lancamento" class="form-inline">
+        <div class="campo"><label>Captador(a)</label><select name="captadorId" id="select-captador-lanc" required></select></div>
+        <div class="campo">
+          <label>Tipo</label>
+          <select name="tipo" id="select-tipo-lanc" required>
+            <option value="empresa_amiga">Empresa Amiga (doação mensal)</option>
+            <option value="patrocinio">Patrocínio (ex.: corrida)</option>
+            <option value="edital">Edital</option>
+            <option value="projeto_incentivado">Projeto incentivado</option>
+          </select>
+        </div>
+        <div class="campo" id="campo-valor-label">
+          <label id="label-valor">Valor mensal do(a) doador(a) (R$)</label>
+          <input name="valorTotal" type="number" min="0.01" step="0.01" required />
+        </div>
+        <div class="campo"><label>Mês da 1ª parcela</label><input name="mesReferencia" type="month" required /></div>
+        <div class="campo" id="campo-doador-nome" style="display:none">
+          <label>Nome do(a) doador(a) (opcional)</label>
+          <input name="doadorNome" placeholder="Ex.: Empresa X" />
+        </div>
+        <div class="campo" id="campo-doador-cota" style="display:none">
+          <label>Cota (opcional)</label>
+          <select name="doadorCota">
+            <option value="">—</option>
+            <option value="bronze">Bronze</option>
+            <option value="prata">Prata</option>
+            <option value="ouro">Ouro</option>
+            <option value="premium">Premium</option>
+          </select>
+        </div>
+        <div class="campo"><label>Descrição (opcional)</label><input name="descricao" placeholder="Ex.: Corrida beneficente 2026" /></div>
+        <button type="submit">Lançar e gerar provisão de 12 meses</button>
+      </form>
+      <div class="mensagem" id="msg-lancamento"></div>
+      <div id="preview-provisoes" style="margin-top:14px"></div>
+    </div>
+
+    <h2>Comissão do mês</h2>
+    <div class="card">
+      <div class="toolbar">
+        <div class="campo"><label>Mês de referência</label><input type="month" id="input-mes-comissao" /></div>
+        <button type="button" class="secundario" id="btn-recarregar-comissao">Recalcular</button>
+      </div>
+      <table id="tabela-comissao">
+        <thead>
+          <tr>
+            <th>Captador(a)</th>
+            <th class="numero">Novos Emp. Amiga (mês)</th>
+            <th class="numero">Meta</th>
+            <th class="numero">Atingimento</th>
+            <th>Faixa</th>
+            <th class="numero">Base total</th>
+            <th class="numero">Comissão</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+      <p class="muted" id="detalhe-base" style="margin-top:10px"></p>
+    </div>
+
+    <h2>Lançamentos recentes</h2>
+    <div class="card">
+      <div class="campo" style="max-width:260px; margin-bottom:10px">
+        <label>Filtrar por captador(a)</label>
+        <select id="select-captador-filtro-lanc"><option value="">Todos</option></select>
+      </div>
+      <table id="tabela-lancamentos">
+        <thead><tr><th>Captador(a)</th><th>Tipo</th><th>Mês 1ª parcela</th><th class="numero">Valor total</th><th>Descrição</th><th></th></tr></thead>
+        <tbody></tbody>
+      </table>
+      <div id="detalhe-provisoes"></div>
+    </div>
+
+    <h2>Doadores/Parceiros do Empresa Amiga</h2>
+    <div class="grid-2">
+      <div class="card">
+        <h3>Confirmar pagamento mensal</h3>
+        <p class="muted">A cada 12 pagamentos confirmados, o(a) doador(a) gera automaticamente o Bônus de Adimplência (R$30 padrão).</p>
+        <div class="campo"><label>Doador(a)</label><select id="select-doador-pagamento"></select></div>
+        <button type="button" id="btn-confirmar-pagamento" style="margin-top:8px">Confirmar mais um pagamento</button>
+        <div class="mensagem" id="msg-pagamento"></div>
+      </div>
+      <div class="card">
+        <h3>Registrar renovação anual</h3>
+        <form id="form-renovacao" class="form-inline">
+          <div class="campo"><label>Doador(a)</label><select name="doadorId" id="select-doador-renovacao" required></select></div>
+          <div class="campo"><label>Data</label><input name="data" type="date" required /></div>
+          <div class="campo">
+            <label>Cota renovada</label>
+            <select name="cota" required>
+              <option value="bronze">Bronze</option>
+              <option value="prata">Prata</option>
+              <option value="ouro">Ouro</option>
+              <option value="premium">Premium</option>
+            </select>
+          </div>
+          <button type="submit">Registrar renovação</button>
+        </form>
+        <div class="mensagem" id="msg-renovacao"></div>
+      </div>
+    </div>
+    <div class="card">
+      <h3>Cadastrar novo doador(a)/parceiro(a)</h3>
+      <form id="form-doador" class="form-inline">
+        <div class="campo"><label>Captador(a)</label><select name="captadorId" id="select-captador-doador" required></select></div>
+        <div class="campo"><label>Nome</label><input name="nome" required /></div>
+        <div class="campo">
+          <label>Cota inicial (opcional)</label>
+          <select name="cota">
+            <option value="">—</option>
+            <option value="bronze">Bronze</option>
+            <option value="prata">Prata</option>
+            <option value="ouro">Ouro</option>
+            <option value="premium">Premium</option>
+          </select>
+        </div>
+        <button type="submit">Cadastrar doador(a)</button>
+      </form>
+      <div class="mensagem" id="msg-doador"></div>
+    </div>
+  </main>
+
+  <script type="module">
+    import { api, formatarMoeda, formatarPercentual, mesAtualISO, mostrarMensagem } from '/js/api.js';
+
+    let captadoresCache = [];
+    let doadoresCache = [];
+
+    function nomeFaixa(faixa) {
+      if (!faixa) return '—';
+      return `${faixa.id} (${formatarPercentual(faixa.percentualComissao)})`;
+    }
+
+    function classeFaixa(percentualComissao) {
+      if (!percentualComissao) return 'faixa-0';
+      if (percentualComissao < 0.05) return 'faixa-3';
+      return 'faixa-7';
+    }
+
+    async function carregarCaptadores() {
+      captadoresCache = await api('GET', '/api/captadores', undefined).then((c) => c.filter((x) => x.ativo));
+      const opcoes = captadoresCache.map((c) => `<option value="${c.id}">${c.nome}</option>`).join('');
+      for (const id of ['select-captador-lanc', 'select-captador-filtro-lanc', 'select-captador-doador']) {
+        const el = document.getElementById(id);
+        el.innerHTML = id === 'select-captador-filtro-lanc' ? `<option value="">Todos</option>${opcoes}` : opcoes;
+      }
+    }
+
+    async function carregarDoadores() {
+      doadoresCache = await api('GET', '/api/doadores');
+      const nomePorCaptador = Object.fromEntries(captadoresCache.map((c) => [c.id, c.nome]));
+      const opcoes = doadoresCache
+        .map((d) => `<option value="${d.id}">${d.nome} — ${nomePorCaptador[d.captador_id] ?? ''} (${d.pagamentos_confirmados} pagos)</option>`)
+        .join('');
+      // Preserva a seleção atual ao recarregar (senão o select volta para a 1ª opção
+      // a cada confirmação de pagamento, fazendo cliques seguidos atingirem outro doador).
+      for (const id of ['select-doador-pagamento', 'select-doador-renovacao']) {
+        const select = document.getElementById(id);
+        const valorAtual = select.value;
+        select.innerHTML = opcoes;
+        if (valorAtual && doadoresCache.some((d) => String(d.id) === valorAtual)) {
+          select.value = valorAtual;
+        }
+      }
+    }
+
+    // --- Formulário de lançamento -----------------------------------------------------
+    const selectTipo = document.getElementById('select-tipo-lanc');
+    const labelValor = document.getElementById('label-valor');
+    const campoDoadorNome = document.getElementById('campo-doador-nome');
+    const campoDoadorCota = document.getElementById('campo-doador-cota');
+
+    function atualizarFormularioPorTipo() {
+      const tipo = selectTipo.value;
+      const ehEmpresaAmiga = tipo === 'empresa_amiga';
+      labelValor.textContent = ehEmpresaAmiga ? 'Valor mensal do(a) doador(a) (R$)' : 'Valor total captado (R$)';
+      campoDoadorNome.style.display = ehEmpresaAmiga ? '' : 'none';
+      campoDoadorCota.style.display = ehEmpresaAmiga ? '' : 'none';
+    }
+    selectTipo.addEventListener('change', atualizarFormularioPorTipo);
+    atualizarFormularioPorTipo();
+
+    document.getElementById('form-lancamento').addEventListener('submit', async (ev) => {
+      ev.preventDefault();
+      const dados = Object.fromEntries(new FormData(ev.target).entries());
+      const msg = document.getElementById('msg-lancamento');
+      try {
+        let doadorId = null;
+        if (dados.tipo === 'empresa_amiga' && dados.doadorNome?.trim()) {
+          const doador = await api('POST', '/api/doadores', {
+            captadorId: Number(dados.captadorId),
+            nome: dados.doadorNome.trim(),
+            cota: dados.doadorCota || null,
+          });
+          doadorId = doador.id;
+        }
+        const lancamento = await api('POST', '/api/lancamentos', {
+          captadorId: Number(dados.captadorId),
+          tipo: dados.tipo,
+          valorTotal: Number(dados.valorTotal),
+          mesReferencia: dados.mesReferencia,
+          doadorId,
+          descricao: dados.descricao || null,
+        });
+        mostrarMensagem(msg, `Lançamento criado — ${lancamento.provisoes.length} parcelas geradas (${lancamento.provisoes[0].mes_referencia} a ${lancamento.provisoes[11].mes_referencia}).`);
+        document.getElementById('preview-provisoes').innerHTML = `
+          <table>
+            <thead><tr><th>Parcela</th><th>Mês</th><th class="numero">Valor</th></tr></thead>
+            <tbody>${lancamento.provisoes.map((p) => `<tr><td>${p.numero_parcela}/12</td><td>${p.mes_referencia}</td><td class="numero">${formatarMoeda(p.valor)}</td></tr>`).join('')}</tbody>
+          </table>`;
+        ev.target.reset();
+        atualizarFormularioPorTipo();
+        await Promise.all([carregarLancamentos(), carregarDoadores(), carregarComissao()]);
+      } catch (err) {
+        mostrarMensagem(msg, err.message, 'erro');
+      }
+    });
+
+    // --- Comissão do mês -----------------------------------------------------
+    const inputMesComissao = document.getElementById('input-mes-comissao');
+    inputMesComissao.value = mesAtualISO();
+
+    async function carregarComissao() {
+      const mes = inputMesComissao.value || mesAtualISO();
+      const resultados = await api('GET', `/api/comissoes?mes=${mes}`);
+      const tbody = document.querySelector('#tabela-comissao tbody');
+      tbody.innerHTML = resultados
+        .map(
+          (r) => `<tr>
+            <td>${r.captador.nome}</td>
+            <td class="numero">${formatarMoeda(r.detalhamento.novosEmpresaAmiga)}</td>
+            <td class="numero">${formatarMoeda(r.detalhamento.meta)}</td>
+            <td class="numero">${formatarPercentual(r.percentualAtingimento)}</td>
+            <td><span class="selo ${classeFaixa(r.percentualComissao)}">${nomeFaixa(r.faixaAplicada)}</span></td>
+            <td class="numero">${formatarMoeda(r.baseTotal)}</td>
+            <td class="numero"><strong>${formatarMoeda(r.valorComissao)}</strong></td>
+          </tr>`
+        )
+        .join('');
+      document.getElementById('detalhe-base').textContent =
+        'Base total = acumulado Empresa Amiga + parcela do mês de patrocínio + parcela do mês de editais + parcela do mês de projetos incentivados.';
+    }
+    document.getElementById('btn-recarregar-comissao').addEventListener('click', carregarComissao);
+    inputMesComissao.addEventListener('change', carregarComissao);
+
+    // --- Lançamentos recentes -----------------------------------------------------
+    async function carregarLancamentos() {
+      const captadorId = document.getElementById('select-captador-filtro-lanc').value;
+      const lancamentos = await api('GET', `/api/lancamentos${captadorId ? `?captadorId=${captadorId}` : ''}`);
+      const nomePorCaptador = Object.fromEntries(captadoresCache.map((c) => [c.id, c.nome]));
+      const rotuloTipo = {
+        empresa_amiga: 'Empresa Amiga',
+        patrocinio: 'Patrocínio',
+        edital: 'Edital',
+        projeto_incentivado: 'Projeto incentivado',
+      };
+      const tbody = document.querySelector('#tabela-lancamentos tbody');
+      tbody.innerHTML = lancamentos
+        .slice(0, 50)
+        .map(
+          (l) => `<tr>
+            <td>${nomePorCaptador[l.captador_id] ?? l.captador_id}</td>
+            <td>${rotuloTipo[l.tipo] ?? l.tipo}</td>
+            <td>${l.mes_referencia}</td>
+            <td class="numero">${formatarMoeda(l.valor_total)}</td>
+            <td>${l.descricao ?? '-'}</td>
+            <td><button class="secundario" data-ver-provisoes="${l.id}">Ver parcelas</button></td>
+          </tr>`
+        )
+        .join('');
+    }
+    document.getElementById('select-captador-filtro-lanc').addEventListener('change', carregarLancamentos);
+
+    document.querySelector('#tabela-lancamentos').addEventListener('click', async (ev) => {
+      const btn = ev.target.closest('[data-ver-provisoes]');
+      if (!btn) return;
+      const lancamento = await api('GET', `/api/lancamentos/${btn.dataset.verProvisoes}`);
+      document.getElementById('detalhe-provisoes').innerHTML = `
+        <h3>Parcelas do lançamento #${lancamento.id} (${lancamento.descricao ?? lancamento.tipo})</h3>
+        <table>
+          <thead><tr><th>Parcela</th><th>Mês</th><th class="numero">Valor</th><th>Status</th></tr></thead>
+          <tbody>${lancamento.provisoes.map((p) => `<tr><td>${p.numero_parcela}/12</td><td>${p.mes_referencia}</td><td class="numero">${formatarMoeda(p.valor)}</td><td>${p.status}</td></tr>`).join('')}</tbody>
+        </table>`;
+    });
+
+    // --- Doadores -----------------------------------------------------
+    document.getElementById('form-doador').addEventListener('submit', async (ev) => {
+      ev.preventDefault();
+      const dados = Object.fromEntries(new FormData(ev.target).entries());
+      const msg = document.getElementById('msg-doador');
+      try {
+        await api('POST', '/api/doadores', {
+          captadorId: Number(dados.captadorId),
+          nome: dados.nome,
+          cota: dados.cota || null,
+        });
+        ev.target.reset();
+        mostrarMensagem(msg, 'Doador(a) cadastrado(a).');
+        await carregarDoadores();
+      } catch (err) {
+        mostrarMensagem(msg, err.message, 'erro');
+      }
+    });
+
+    document.getElementById('btn-confirmar-pagamento').addEventListener('click', async () => {
+      const doadorId = document.getElementById('select-doador-pagamento').value;
+      const msg = document.getElementById('msg-pagamento');
+      if (!doadorId) return mostrarMensagem(msg, 'Cadastre um doador primeiro.', 'erro');
+      try {
+        const resultado = await api('POST', `/api/doadores/${doadorId}/pagamentos`);
+        const texto = resultado.bonusConcedido
+          ? `Pagamento confirmado (${resultado.doador.pagamentos_confirmados}/12) — Bônus de adimplência de ${formatarMoeda(resultado.bonusConcedido.valor)} concedido!`
+          : `Pagamento confirmado (${resultado.doador.pagamentos_confirmados}/12).`;
+        mostrarMensagem(msg, texto);
+        await carregarDoadores();
+      } catch (err) {
+        mostrarMensagem(msg, err.message, 'erro');
+      }
+    });
+
+    document.getElementById('form-renovacao').addEventListener('submit', async (ev) => {
+      ev.preventDefault();
+      const dados = Object.fromEntries(new FormData(ev.target).entries());
+      const msg = document.getElementById('msg-renovacao');
+      try {
+        const renovacao = await api('POST', `/api/doadores/${dados.doadorId}/renovacoes`, {
+          data: dados.data,
+          cota: dados.cota,
+        });
+        mostrarMensagem(msg, `Renovação registrada — bônus de ${formatarMoeda(renovacao.valor_bonus)}.`);
+        ev.target.reset();
+        await carregarDoadores();
+      } catch (err) {
+        mostrarMensagem(msg, err.message, 'erro');
+      }
+    });
+
+    (async function iniciar() {
+      await carregarCaptadores();
+      await Promise.all([carregarDoadores(), carregarLancamentos(), carregarComissao()]);
+    })();
+  </script>
+</body>
+</html>
