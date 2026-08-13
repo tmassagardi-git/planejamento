@@ -4,6 +4,10 @@ Cliente de integração com a API de Telemarketing da plataforma de doações
 (ApiSTI), para alimentar os painéis de resultado do KairOS (geral e por
 operadora). Ver detalhes da API em [`docs/api-sti.md`](docs/api-sti.md).
 
+> Este repositório também contém, em [`crm/`](crm/README.md), um CRM de
+> prospecção e fechamento de empresas doadoras (funil de vendas, doações e
+> dashboard), que roda offline no navegador. Ver [`crm/README.md`](crm/README.md).
+
 ## Status atual
 
 - [x] Cliente HTTP com paginação automática (`src/apiClient.js`)

@@ -1,0 +1,111 @@
+# CRM Doadores — Gestão de Prospecção e Fechamento de Empresas
+
+CRM para ONGs gerenciarem a prospecção e o fechamento de empresas doadoras
+("Empresa Amiga"): cadastro de empresas e contatos, funil de vendas com
+kanban arrastável, conversão de oportunidades ganhas em doações com parcelas,
+controle financeiro das doações e um dashboard com os principais indicadores.
+
+Roda **100% offline no navegador** — todos os dados ficam salvos localmente
+via IndexedDB (biblioteca [Dexie](https://dexie.org)). Não há backend nem
+necessidade de internet para usar o sistema no dia a dia.
+
+## Rodando localmente
+
+```bash
+npm install
+npm run dev      # abre em http://localhost:5173
+```
+
+Build de produção (gera arquivos estáticos em `dist/`, pode ser hospedado em
+qualquer servidor estático ou aberto localmente):
+
+```bash
+npm run build
+npm run preview
+```
+
+## Funcionalidades
+
+- **Empresas** — cadastro (nome, CNPJ, segmento, contato, endereço, tags,
+  observações), busca, e ficha detalhada com abas:
+  - **Dados** — informações cadastrais
+  - **Contatos** — pessoas associadas à empresa (nome, cargo, telefone,
+    WhatsApp, e-mail)
+  - **Histórico de Doações** — todas as doações da empresa, cada uma
+    expansível para ver as parcelas
+- **Funil de Vendas** — etapas configuráveis (Configurações → Funil de
+  vendas), visualização **Kanban** (drag and drop entre etapas) ou **Lista**.
+  Cada oportunidade tem: empresa, contato, nome, proposta (o que foi
+  ofertado), valor, mês trabalhado, previsão de fechamento e observações.
+- **Ganho → Doação** — ao clicar em "Marcar venda" numa oportunidade, abre um
+  formulário para lançar a doação gerada: projeto apoiado, cota/categoria,
+  valor total e número de parcelas. As parcelas mensais são geradas
+  automaticamente a partir da data de início.
+- **Doações** — página de controle financeiro: todas as doações (doadores),
+  cada uma com suas parcelas (data prevista, data da baixa, status, meio de
+  pagamento). "Dar baixa" registra o pagamento de uma parcela.
+- **Dashboard** — arrecadado x previsto por mês, novos doadores por mês,
+  distribuição por categoria/cota, funil de conversão por etapa.
+- **Configurações** — etapas do funil (criar/editar/reordenar/excluir),
+  cotas/categorias, estratégias, meios de pagamento e motivos de perda —
+  todos editáveis para se adaptar ao vocabulário da sua ONG.
+
+## Backup dos dados
+
+Como os dados ficam apenas no navegador (IndexedDB), use **Configurações →
+Backup dos dados** para exportar um `.json` regularmente. O mesmo arquivo
+pode ser reimportado (substitui todos os dados atuais) para restaurar ou
+migrar de máquina.
+
+## Arquitetura (pensada para migração futura ao Lovable/Supabase)
+
+```
+src/
+  lib/
+    types.ts     # modelo de dados (entidades) — ids uuid, datas ISO
+    db.ts        # schema do IndexedDB (Dexie)
+    seed.ts      # dados iniciais (funil padrão + catálogo)
+    format.ts    # formatação de moeda/data (pt-BR)
+  services/      # camada de acesso a dados — TODA a lógica de negócio
+                 # (criar/editar/mover oportunidade, gerar parcelas, dar
+                 # baixa, agregações do dashboard) vive aqui, isolada do
+                 # IndexedDB por trás de funções simples (create*, update*,
+                 # delete*, etc.)
+  components/    # UI reutilizável (formulários, kanban, cards)
+  pages/         # uma página por rota
+```
+
+A ideia de "trabalhar offline agora, exportar para o Lovable depois": a
+camada `services/*.ts` é a única parte que conversa com o banco (Dexie/
+IndexedDB). Para migrar para Supabase (usado pelo Lovable), essas funções
+podem ser reescritas para chamar `supabase.from(...)` mantendo a mesma
+assinatura — o restante do app (componentes, páginas) não muda.
+
+O modelo de dados (`src/lib/types.ts`) já foi desenhado pensando nisso:
+
+| Entidade        | Tabela sugerida no Postgres | Observações |
+|-----------------|------------------------------|--------------|
+| `Company`       | `companies`                  | — |
+| `Contact`        | `contacts`                   | FK `company_id` |
+| `Funnel`         | `funnels`                     | — |
+| `Stage`          | `stages`                      | FK `funnel_id`, campo `order` |
+| `Opportunity`    | `opportunities`               | FK `funnel_id`, `stage_id`, `company_id`, `contact_id`, `donation_id` |
+| `Donation`       | `donations`                   | FK `company_id`, `opportunity_id` |
+| `Installment`    | `installments`                | FK `donation_id` |
+| `Catalog`        | pode virar tabelas `categories`, `strategies`, `payment_methods`, `loss_reasons` (ou permanecer 1 registro de config) | — |
+
+Convenções usadas (facilitam o `CREATE TABLE` no Postgres):
+- `id`: `uuid` (gerado com `uuid` no cliente — pode continuar assim ou virar
+  `default gen_random_uuid()`)
+- Datas "sem hora" (`startDate`, `dueDate`, `paymentDate`, `expectedCloseDate`):
+  string `YYYY-MM-DD` → tipo `date`
+  - `createdAt`/`updatedAt`: string ISO completa → tipo `timestamptz`
+- Valores monetários: `number` em reais (não centavos) → `numeric(12,2)`
+- `Opportunity.workingMonth`: string `YYYY-MM` → pode virar `date` (primeiro
+  dia do mês) ou `text`, como preferir
+
+## Stack
+
+React + TypeScript + Vite + Tailwind CSS v4 + Dexie (IndexedDB) + dnd-kit
+(drag and drop) + Recharts (gráficos) + React Router — o mesmo tipo de stack
+usado pelo Lovable, o que deixa a migração mais direta quando chegar a hora.
