@@ -1,4 +1,4 @@
-import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
+import { HashRouter, Navigate, Route, Routes } from 'react-router-dom';
 import { Layout } from './components/Layout';
 import { CompaniesPage } from './pages/CompaniesPage';
 import { FunnelPage } from './pages/FunnelPage';
@@ -8,7 +8,7 @@ import { SettingsPage } from './pages/SettingsPage';
 
 function App() {
   return (
-    <BrowserRouter>
+    <HashRouter>
       <Routes>
         <Route element={<Layout />}>
           <Route index element={<Navigate to="/dashboard" replace />} />
@@ -20,7 +20,7 @@ function App() {
           <Route path="*" element={<Navigate to="/dashboard" replace />} />
         </Route>
       </Routes>
-    </BrowserRouter>
+    </HashRouter>
   );
 }
 
