@@ -396,17 +396,21 @@
     margin: 0 0 10px;
     letter-spacing: -0.005em;
   }
-  .chart-legend { display: flex; gap: 16px; font-size: 12px; color: var(--muted); margin-bottom: 8px; }
+  .chart-legend { display: flex; gap: 16px; font-size: 12px; color: var(--muted); margin-bottom: 8px; flex-wrap: wrap; }
   .chart-legend .swatch { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 5px; vertical-align: -1px; }
+  .chart-legend .legend-line { display: inline-block; width: 14px; height: 2px; border-radius: 1px; margin-right: 6px; vertical-align: 3px; }
   .chart-card .table-scroll { overflow-x: auto; }
   .chart-card svg { display: block; }
   .chart-axis-label { fill: var(--muted); font-size: 10.5px; font-family: var(--font-body); }
   .chart-grid-line { stroke: var(--border); stroke-width: 1; shape-rendering: crispEdges; }
   .chart-goal-line { stroke: var(--gold); stroke-width: 1.5; stroke-dasharray: 4 3; }
   .chart-goal-label { fill: var(--gold-strong); font-size: 10px; font-weight: 600; font-family: var(--font-body); }
+  .chart-crosshair { stroke: var(--muted); stroke-width: 1; opacity: 0; }
+  .chart-crosshair.active { opacity: 0.5; }
   .chart-hit { fill: transparent; cursor: pointer; }
   .chart-hit:focus-visible { outline: 2px solid var(--ink); outline-offset: -2px; }
-  .chart-col.hovered .chart-mark { filter: brightness(0.92); }
+  .chart-mark.active { filter: brightness(0.92); }
+  .chart-dot.active { r: 6; }
   .chart-tooltip {
     position: absolute;
     pointer-events: none;
@@ -450,19 +454,15 @@
     </div>
     <div class="panel-body">
       <div id="dashboardGrid" class="dashboard-grid">
-        <div class="chart-card" id="cardContracts">
-          <h3 class="chart-title">Valor de contratos ativos por mês</h3>
-          <div class="table-scroll"><div id="chartContracts"></div></div>
-          <div class="chart-tooltip" id="ttContracts" hidden></div>
-        </div>
-        <div class="chart-card" id="cardCommission">
-          <h3 class="chart-title">Comissão por mês</h3>
+        <div class="chart-card" id="cardCombined">
+          <h3 class="chart-title">Contratos e comissão por mês</h3>
           <div class="chart-legend">
-            <span><span class="swatch" style="background:var(--chart-paid)"></span>Pago</span>
-            <span><span class="swatch" style="background:var(--chart-pending)"></span>Pendente</span>
+            <span><span class="legend-line" style="background:var(--chart-contracts)"></span>Contratos ativos</span>
+            <span><span class="swatch" style="background:var(--chart-paid)"></span>Comissão paga</span>
+            <span><span class="swatch" style="background:var(--chart-pending)"></span>Comissão pendente</span>
           </div>
-          <div class="table-scroll"><div id="chartCommission"></div></div>
-          <div class="chart-tooltip" id="ttCommission" hidden></div>
+          <div class="table-scroll"><div id="chartCombined"></div></div>
+          <div class="chart-tooltip" id="ttCombined" hidden></div>
         </div>
       </div>
       <div id="dashboardEmpty" class="empty" style="display:none;">Cadastre um contrato para ver os gráficos do dashboard.</div>
@@ -1169,7 +1169,7 @@ function escapeHtml(str) {
 
 // ---------- Dashboard (gráficos) ----------
 
-const CHART_MARGIN = { left: 56, right: 16, top: 24, bottom: 30 };
+const CHART_MARGIN = { left: 74, right: 16, top: 24, bottom: 30 };
 const CHART_HEIGHT = 190;
 const BAR_SLOT = 56;
 const BAR_WIDTH = 22;
@@ -1264,9 +1264,13 @@ function chartFrame(months, yMax) {
   return { width, height, baseline, gridLines };
 }
 
-function renderContractsChartSVG(months) {
+// Um único gráfico, mesma escala em R$ para as duas séries: o valor de
+// contratos ativos entra como linha (soma dos valores dos contratos daquele
+// mês) e a comissão como colunas empilhadas (paga/pendente). Um único eixo —
+// nunca um gráfico de eixo duplo, que engana a leitura da comparação.
+function renderCombinedChartSVG(months) {
   const meta = Number(state.settings.metaDesafio);
-  const rawMax = Math.max(...months.map(m => m.receitaTotal), meta);
+  const rawMax = Math.max(...months.map(m => Math.max(m.receitaTotal, m.comissaoTotal)), meta);
   const yMax = niceMax(rawMax * 1.15);
   const { width, height, baseline, gridLines } = chartFrame(months, yMax);
 
@@ -1276,71 +1280,63 @@ function renderContractsChartSVG(months) {
     <text class="chart-goal-label" x="${width - CHART_MARGIN.right}" y="${goalY - 5}" text-anchor="end">Meta desafio · ${fmtCompactBRL(meta)}</text>
   ` : '';
 
-  const bars = months.map((m, i) => {
-    const x = CHART_MARGIN.left + i * BAR_SLOT + (BAR_SLOT - BAR_WIDTH) / 2;
-    const h = (m.receitaTotal / yMax) * CHART_HEIGHT;
-    const y = baseline - h;
-    const path = roundedTopPath(x, y, BAR_WIDTH, h, 4);
-    let tooltip = `${fmtMonth(m.mes)} — ${fmtBRL(m.receitaTotal)} em contratos ativos`;
-    if (m.novosContratos > 0) tooltip += ` · novos contratos assinados: ${fmtBRL(m.novosContratos)}`;
-    if (m.bonus) tooltip += ' · 🏆 meta desafio batida';
-    return `
-      <g class="chart-col">
-        ${path ? `<path class="chart-mark" style="fill:var(--chart-contracts)" d="${path}"></path>` : ''}
-        <rect class="chart-hit" x="${CHART_MARGIN.left + i * BAR_SLOT}" y="${CHART_MARGIN.top}" width="${BAR_SLOT}" height="${CHART_HEIGHT}"
-          tabindex="0" role="img" aria-label="${escapeHtml(tooltip)}" data-tooltip="${escapeHtml(tooltip)}"></rect>
-        ${m.bonus ? `<text x="${x + BAR_WIDTH / 2}" y="${Math.max(y - 8, CHART_MARGIN.top - 4)}" text-anchor="middle" font-size="12">🏆</text>` : ''}
-        <text class="chart-axis-label" x="${x + BAR_WIDTH / 2}" y="${baseline + 18}" text-anchor="middle">${shortMonth(m.mes)}</text>
-      </g>
-    `;
-  }).join('');
+  let barsMarkup = '';
+  let crosshairMarkup = '';
+  let dotsMarkup = '';
+  let hitMarkup = '';
+  const linePoints = [];
 
-  return `<svg viewBox="0 0 ${width} ${height}" width="${width}" height="${height}" role="img" aria-label="Valor de contratos ativos por mês">
-    ${gridLines}
-    ${bars}
-    ${goalLine}
-  </svg>`;
-}
+  months.forEach((m, i) => {
+    const x0 = CHART_MARGIN.left + i * BAR_SLOT;
+    const x = x0 + (BAR_SLOT - BAR_WIDTH) / 2;
+    const lineX = x + BAR_WIDTH / 2;
 
-function renderCommissionChartSVG(months) {
-  const yMax = niceMax(Math.max(...months.map(m => m.comissaoTotal), 1) * 1.15);
-  const { width, height, baseline, gridLines } = chartFrame(months, yMax);
-
-  const bars = months.map((m, i) => {
-    const x = CHART_MARGIN.left + i * BAR_SLOT + (BAR_SLOT - BAR_WIDTH) / 2;
     const hPaga = (m.comissaoPaga / yMax) * CHART_HEIGHT;
     const hPendente = (m.comissaoPendente / yMax) * CHART_HEIGHT;
-    const tooltip = `${fmtMonth(m.mes)} — ${fmtBRL(m.comissaoPaga)} paga, ${fmtBRL(m.comissaoPendente)} pendente (total ${fmtBRL(m.comissaoTotal)})`;
-
     let cursorBottom = baseline;
     const segments = [
       { h: hPaga, colorVar: '--chart-paid' },
       { h: hPendente, colorVar: '--chart-pending' }
     ].filter(s => s.h > 0);
-
-    let segMarkup = '';
     segments.forEach((seg, idx) => {
       const top = cursorBottom - seg.h;
       const isTop = idx === segments.length - 1;
-      segMarkup += isTop
-        ? `<path class="chart-mark" style="fill:var(${seg.colorVar})" d="${roundedTopPath(x, top, BAR_WIDTH, seg.h, 4)}"></path>`
-        : `<rect class="chart-mark" style="fill:var(${seg.colorVar})" x="${x}" y="${top}" width="${BAR_WIDTH}" height="${seg.h}"></rect>`;
+      barsMarkup += isTop
+        ? `<path class="chart-mark" data-idx="${i}" style="fill:var(${seg.colorVar})" d="${roundedTopPath(x, top, BAR_WIDTH, seg.h, 4)}"></path>`
+        : `<rect class="chart-mark" data-idx="${i}" style="fill:var(${seg.colorVar})" x="${x}" y="${top}" width="${BAR_WIDTH}" height="${seg.h}"></rect>`;
       cursorBottom = top - CHART_GAP;
     });
 
-    return `
-      <g class="chart-col">
-        ${segMarkup}
-        <rect class="chart-hit" x="${CHART_MARGIN.left + i * BAR_SLOT}" y="${CHART_MARGIN.top}" width="${BAR_SLOT}" height="${CHART_HEIGHT}"
-          tabindex="0" role="img" aria-label="${escapeHtml(tooltip)}" data-tooltip="${escapeHtml(tooltip)}"></rect>
-        <text class="chart-axis-label" x="${x + BAR_WIDTH / 2}" y="${baseline + 18}" text-anchor="middle">${shortMonth(m.mes)}</text>
-      </g>
-    `;
-  }).join('');
+    const lineY = baseline - (m.receitaTotal / yMax) * CHART_HEIGHT;
+    linePoints.push({ x: lineX, y: lineY });
 
-  return `<svg viewBox="0 0 ${width} ${height}" width="${width}" height="${height}" role="img" aria-label="Comissão por mês, paga e pendente">
+    crosshairMarkup += `<line class="chart-crosshair" data-idx="${i}" x1="${lineX}" x2="${lineX}" y1="${CHART_MARGIN.top}" y2="${baseline}"></line>`;
+
+    dotsMarkup += `<circle class="chart-mark chart-dot" data-idx="${i}" cx="${lineX}" cy="${lineY}" r="4.5" style="fill:var(--chart-contracts)" stroke="var(--surface-2)" stroke-width="2"></circle>`;
+    if (m.bonus) dotsMarkup += `<text x="${lineX}" y="${Math.max(lineY - 10, CHART_MARGIN.top - 2)}" text-anchor="middle" font-size="12">🏆</text>`;
+
+    let tooltip = `${fmtMonth(m.mes)} — ${fmtBRL(m.receitaTotal)} em contratos ativos`;
+    tooltip += ` · comissão: ${fmtBRL(m.comissaoPaga)} paga, ${fmtBRL(m.comissaoPendente)} pendente`;
+    if (m.novosContratos > 0) tooltip += ` · novos contratos assinados: ${fmtBRL(m.novosContratos)}`;
+    if (m.bonus) tooltip += ' · 🏆 meta desafio batida';
+    hitMarkup += `
+      <rect class="chart-hit" data-idx="${i}" x="${x0}" y="${CHART_MARGIN.top}" width="${BAR_SLOT}" height="${CHART_HEIGHT}"
+        tabindex="0" role="img" aria-label="${escapeHtml(tooltip)}" data-tooltip="${escapeHtml(tooltip)}"></rect>
+      <text class="chart-axis-label" x="${x0 + BAR_SLOT / 2}" y="${baseline + 18}" text-anchor="middle">${shortMonth(m.mes)}</text>
+    `;
+  });
+
+  const linePath = linePoints.map((p, i) => (i === 0 ? 'M' : 'L') + p.x + ',' + p.y).join(' ');
+  const lineMarkup = `<path d="${linePath}" fill="none" style="stroke:var(--chart-contracts)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"></path>`;
+
+  return `<svg viewBox="0 0 ${width} ${height}" width="${width}" height="${height}" role="img" aria-label="Contratos e comissão por mês">
     ${gridLines}
-    ${bars}
+    ${crosshairMarkup}
+    ${barsMarkup}
+    ${lineMarkup}
+    ${dotsMarkup}
+    ${goalLine}
+    ${hitMarkup}
   </svg>`;
 }
 
@@ -1371,13 +1367,17 @@ function initChartTooltip(cardId, tooltipId) {
     tip.style.top = Math.max(rect.top - cardRect.top - 8, 0) + 'px';
   }
   function hide() { tip.hidden = true; }
+  function setActive(idx, on) {
+    card.querySelectorAll(`[data-idx="${idx}"]`).forEach(el => el.classList.toggle('active', on));
+  }
 
   card.querySelectorAll('.chart-hit').forEach(hit => {
-    hit.addEventListener('pointerenter', () => hit.closest('.chart-col')?.classList.add('hovered'));
+    const idx = hit.dataset.idx;
+    hit.addEventListener('pointerenter', () => setActive(idx, true));
     hit.addEventListener('pointermove', (e) => show(e, hit));
-    hit.addEventListener('pointerleave', () => { hide(); hit.closest('.chart-col')?.classList.remove('hovered'); });
-    hit.addEventListener('focus', () => { showAtFocus(hit); hit.closest('.chart-col')?.classList.add('hovered'); });
-    hit.addEventListener('blur', () => { hide(); hit.closest('.chart-col')?.classList.remove('hovered'); });
+    hit.addEventListener('pointerleave', () => { hide(); setActive(idx, false); });
+    hit.addEventListener('focus', () => { showAtFocus(hit); setActive(idx, true); });
+    hit.addEventListener('blur', () => { hide(); setActive(idx, false); });
   });
 }
 
@@ -1396,10 +1396,8 @@ function renderDashboard() {
   emptyEl.style.display = 'none';
   gridEl.style.display = 'grid';
 
-  document.getElementById('chartContracts').innerHTML = renderContractsChartSVG(months);
-  document.getElementById('chartCommission').innerHTML = renderCommissionChartSVG(months);
-  initChartTooltip('cardContracts', 'ttContracts');
-  initChartTooltip('cardCommission', 'ttCommission');
+  document.getElementById('chartCombined').innerHTML = renderCombinedChartSVG(months);
+  initChartTooltip('cardCombined', 'ttCombined');
 
   tableBody.innerHTML = months.map(m => `
     <tr>
