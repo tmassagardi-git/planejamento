@@ -30,6 +30,8 @@ export type EntryRow = {
   notes: string | null
   link: string | null
   color: string
+  google_event_id: string | null
+  google_updated_at: string | null
 }
 
 export type HolidayRow = { date: string; label: string }
@@ -81,6 +83,8 @@ export function fromEntryRow(row: EntryRow): Entry {
     notes: row.notes ?? undefined,
     link: row.link ?? undefined,
     color: row.color,
+    googleEventId: row.google_event_id ?? undefined,
+    googleUpdatedAt: row.google_updated_at ?? undefined,
   }
 }
 
@@ -100,6 +104,8 @@ export function toEntryRow(e: Entry): EntryRow {
     notes: e.notes ?? null,
     link: e.link ?? null,
     color: e.color,
+    google_event_id: e.googleEventId ?? null,
+    google_updated_at: e.googleUpdatedAt ?? null,
   }
 }
 

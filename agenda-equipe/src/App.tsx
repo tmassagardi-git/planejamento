@@ -20,10 +20,30 @@ export default function App() {
   const loading = useStore((s) => s.loading)
   const syncError = useStore((s) => s.syncError)
   const initialize = useStore((s) => s.initialize)
+  const googleConnections = useStore((s) => s.googleConnections)
+  const connectGoogle = useStore((s) => s.connectGoogle)
+  const refreshGoogleConnections = useStore((s) => s.refreshGoogleConnections)
 
   useEffect(() => {
     initialize()
   }, [initialize])
+
+  const [googleNotice, setGoogleNotice] = useState<'connected' | 'error' | null>(null)
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    const google = params.get('google')
+    if (google === 'connected' || google === 'error') {
+      setGoogleNotice(google)
+      if (google === 'connected') refreshGoogleConnections()
+      params.delete('google')
+      params.delete('reason')
+      const query = params.toString()
+      window.history.replaceState({}, '', window.location.pathname + (query ? `?${query}` : ''))
+      const timer = setTimeout(() => setGoogleNotice(null), 6000)
+      return () => clearTimeout(timer)
+    }
+  }, [refreshGoogleConnections])
 
   const clients = useStore((s) => s.clients)
   const categories = useStore((s) => s.categories)
@@ -110,6 +130,17 @@ export default function App() {
   return (
     <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
       <div className="flex h-screen flex-col">
+        {googleNotice && (
+          <div
+            className={`px-4 py-2 text-center text-sm font-medium ${
+              googleNotice === 'connected' ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-700'
+            }`}
+          >
+            {googleNotice === 'connected'
+              ? 'Google Calendar conectado com sucesso!'
+              : 'Não foi possível conectar ao Google Calendar. Tente novamente.'}
+          </div>
+        )}
         <div className="flex flex-1 overflow-hidden">
           <Sidebar
             month={month}
@@ -167,6 +198,8 @@ export default function App() {
           onUpdate={updateMember}
           onRemove={removeMember}
           onReorder={reorderMembers}
+          googleConnections={googleConnections}
+          onConnectGoogle={connectGoogle}
         />
       )}
     </DndContext>

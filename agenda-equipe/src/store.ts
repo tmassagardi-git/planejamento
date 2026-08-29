@@ -1,6 +1,6 @@
 import { nanoid } from 'nanoid'
 import { create } from 'zustand'
-import { supabase } from './lib/supabase'
+import { SUPABASE_URL, supabase } from './lib/supabase'
 import {
   fromCategoryRow,
   fromClientRow,
@@ -28,6 +28,23 @@ function logError(context: string) {
   return (result: { error: unknown }) => {
     if (result.error) console.error(`[agenda-equipe] ${context} failed:`, result.error)
   }
+}
+
+function syncEntryToGoogle(entryId: string) {
+  supabase.functions
+    .invoke('sync-entry-to-google', { body: { action: 'upsert', entryId } })
+    .then(({ error }) => {
+      if (error) console.error('[agenda-equipe] syncEntryToGoogle failed:', error)
+    })
+}
+
+function syncEntryDeleteToGoogle(memberId: string, googleEventId: string | undefined) {
+  if (!googleEventId) return
+  supabase.functions
+    .invoke('sync-entry-to-google', { body: { action: 'delete', memberId, googleEventId } })
+    .then(({ error }) => {
+      if (error) console.error('[agenda-equipe] syncEntryDeleteToGoogle failed:', error)
+    })
 }
 
 function sortKey(e: Entry): string {
@@ -85,11 +102,15 @@ type Actions = {
 
   setHoliday: (date: string, label: string) => void
   clearHoliday: (date: string) => void
+
+  connectGoogle: (memberId: string) => void
+  refreshGoogleConnections: () => Promise<void>
 }
 
 type SyncState = { loading: boolean; initialized: boolean; syncError: string | null }
+type GoogleState = { googleConnections: Record<string, string> } // memberId -> connected Google email
 
-export type Store = ScheduleState & SyncState & Actions
+export type Store = ScheduleState & SyncState & GoogleState & Actions
 
 function refColor(state: ScheduleState, kind: 'client' | 'category', refId: string): { color: string; label: string } {
   if (kind === 'client') {
@@ -170,6 +191,19 @@ export const useStore = create<Store>()((set, get) => {
       .subscribe()
   }
 
+  async function loadGoogleConnections() {
+    const { data, error } = await supabase.from('google_connections').select('*')
+    if (error) {
+      console.error('[agenda-equipe] loadGoogleConnections failed:', error)
+      return
+    }
+    const googleConnections: Record<string, string> = {}
+    for (const row of (data ?? []) as { member_id: string; google_email: string | null }[]) {
+      if (row.google_email) googleConnections[row.member_id] = row.google_email
+    }
+    set({ googleConnections })
+  }
+
   return {
     members: [],
     clients: [],
@@ -179,6 +213,7 @@ export const useStore = create<Store>()((set, get) => {
     loading: true,
     initialized: false,
     syncError: null,
+    googleConnections: {},
 
     initialize: async () => {
       if (get().initialized) return
@@ -216,7 +251,13 @@ export const useStore = create<Store>()((set, get) => {
         loading: false,
       })
       subscribeRealtime()
+      loadGoogleConnections()
     },
+
+    connectGoogle: (memberId) => {
+      window.location.href = `${SUPABASE_URL}/functions/v1/google-oauth-start?memberId=${encodeURIComponent(memberId)}`
+    },
+    refreshGoogleConnections: () => loadGoogleConnections(),
 
     addMember: (name, range) => {
       const member: Member = {
@@ -403,7 +444,13 @@ export const useStore = create<Store>()((set, get) => {
         entry = { id: entryId, memberId, date, kind: input.kind, refId: input.refId, label, color, ...schedule }
       }
       set((st) => ({ entries: { ...st.entries, [entryId]: entry } }))
-      supabase.from('entries').insert(toEntryRow(entry)).then(logError('addEntry'))
+      supabase
+        .from('entries')
+        .insert(toEntryRow(entry))
+        .then((result) => {
+          logError('addEntry')(result)
+          if (!result.error) syncEntryToGoogle(entryId)
+        })
     },
 
     updateEntry: (entryId, patch) => {
@@ -421,10 +468,19 @@ export const useStore = create<Store>()((set, get) => {
         return { entries: { ...s.entries, [entryId]: merged } }
       })
       const updated = get().entries[entryId]
-      if (updated) supabase.from('entries').update(toEntryRow(updated)).eq('id', entryId).then(logError('updateEntry'))
+      if (updated)
+        supabase
+          .from('entries')
+          .update(toEntryRow(updated))
+          .eq('id', entryId)
+          .then((result) => {
+            logError('updateEntry')(result)
+            if (!result.error) syncEntryToGoogle(entryId)
+          })
     },
 
     moveEntry: (entryId, toMemberId, toDate) => {
+      const previous = get().entries[entryId]
       set((s) => {
         const entry = s.entries[entryId]
         if (!entry) return {}
@@ -434,25 +490,61 @@ export const useStore = create<Store>()((set, get) => {
         .from('entries')
         .update({ member_id: toMemberId, date: toDate })
         .eq('id', entryId)
-        .then(logError('moveEntry'))
+        .then((result) => {
+          logError('moveEntry')(result)
+          if (result.error || !previous) return
+          // Moving to a different member means the event belongs on a different
+          // Google Calendar — delete it from the old owner's and recreate for the new one.
+          if (previous.memberId !== toMemberId) {
+            syncEntryDeleteToGoogle(previous.memberId, previous.googleEventId)
+            supabase
+              .from('entries')
+              .update({ google_event_id: null, google_updated_at: null })
+              .eq('id', entryId)
+              .then(() => syncEntryToGoogle(entryId))
+          } else {
+            syncEntryToGoogle(entryId)
+          }
+        })
     },
 
     duplicateEntry: (entryId, toDate, toMemberId) => {
       const source = get().entries[entryId]
       if (!source) return
       const newId = id()
-      const copy: Entry = { ...source, id: newId, date: toDate, memberId: toMemberId ?? source.memberId }
+      const copy: Entry = {
+        ...source,
+        id: newId,
+        date: toDate,
+        memberId: toMemberId ?? source.memberId,
+        googleEventId: undefined,
+        googleUpdatedAt: undefined,
+      }
       set((s) => ({ entries: { ...s.entries, [newId]: copy } }))
-      supabase.from('entries').insert(toEntryRow(copy)).then(logError('duplicateEntry'))
+      supabase
+        .from('entries')
+        .insert(toEntryRow(copy))
+        .then((result) => {
+          logError('duplicateEntry')(result)
+          if (!result.error) syncEntryToGoogle(newId)
+        })
     },
 
     removeEntry: (entryId) => {
+      const entry = get().entries[entryId]
       set((s) => {
         const entries = { ...s.entries }
         delete entries[entryId]
         return { entries }
       })
-      supabase.from('entries').delete().eq('id', entryId).then(logError('removeEntry'))
+      supabase
+        .from('entries')
+        .delete()
+        .eq('id', entryId)
+        .then((result) => {
+          logError('removeEntry')(result)
+          if (!result.error && entry) syncEntryDeleteToGoogle(entry.memberId, entry.googleEventId)
+        })
     },
 
     setHoliday: (date, label) => {

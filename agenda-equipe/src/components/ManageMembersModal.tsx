@@ -1,4 +1,4 @@
-import { ArrowDown, ArrowUp, CalendarRange, Pencil, Plus, Trash2 } from 'lucide-react'
+import { ArrowDown, ArrowUp, CalendarRange, Check, Pencil, Plus, Trash2 } from 'lucide-react'
 import { useState } from 'react'
 import type { Member } from '../types'
 import { nextPaletteColor } from '../utils/color'
@@ -13,6 +13,8 @@ type Props = {
   onUpdate: (id: string, patch: Partial<Omit<Member, 'id'>>) => void
   onRemove: (id: string) => void
   onReorder: (orderedIds: string[]) => void
+  googleConnections: Record<string, string>
+  onConnectGoogle: (id: string) => void
 }
 
 function rangeLabel(startDate?: string, endDate?: string): string | null {
@@ -22,7 +24,16 @@ function rangeLabel(startDate?: string, endDate?: string): string | null {
   return `Até ${formatDateBR(endDate!)}`
 }
 
-export default function ManageMembersModal({ members, onClose, onAdd, onUpdate, onRemove, onReorder }: Props) {
+export default function ManageMembersModal({
+  members,
+  onClose,
+  onAdd,
+  onUpdate,
+  onRemove,
+  onReorder,
+  googleConnections,
+  onConnectGoogle,
+}: Props) {
   const sorted = [...members].sort((a, b) => a.order - b.order)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [creating, setCreating] = useState(false)
@@ -89,6 +100,18 @@ export default function ManageMembersModal({ members, onClose, onAdd, onUpdate, 
                 <p className="flex items-center gap-1 truncate text-[11px] text-slate-400">
                   <CalendarRange size={11} /> {rangeLabel(m.startDate, m.endDate)}
                 </p>
+              )}
+              {googleConnections[m.id] ? (
+                <p className="flex items-center gap-1 truncate text-[11px] font-medium text-emerald-600">
+                  <Check size={11} /> Google conectado ({googleConnections[m.id]})
+                </p>
+              ) : (
+                <button
+                  onClick={() => onConnectGoogle(m.id)}
+                  className="mt-0.5 text-[11px] font-medium text-indigo-500 hover:text-indigo-700 hover:underline"
+                >
+                  Conectar Google Calendar
+                </button>
               )}
             </div>
             <div className="flex opacity-0 group-hover:opacity-100">

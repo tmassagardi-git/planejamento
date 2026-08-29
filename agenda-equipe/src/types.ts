@@ -44,6 +44,8 @@ export type Entry = {
   notes?: string // optional free-text note, shown on hover
   link?: string // optional meeting URL
   color: string
+  googleEventId?: string // set once this entry has been pushed to / pulled from Google Calendar
+  googleUpdatedAt?: string // Google's `updated` timestamp for googleEventId, used to avoid sync loops
 }
 
 export type Holiday = {
