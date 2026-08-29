@@ -105,3 +105,25 @@ export interface Catalog extends BaseEntity {
   paymentMethods: string[]; // meios de pagamento
   lossReasons: string[]; // motivos de perda de oportunidade
 }
+
+// --- Sistema VIC (Vínculo, Interesse, Capacidade) ---
+// Método de qualificação de prospects: cada critério pertence a um dos três
+// eixos e tem um peso; a nota de um eixo é a média ponderada das notas
+// (0-5) dadas a cada critério daquele eixo. Uma empresa pode ter mais de
+// uma avaliação VIC (uma por projeto).
+
+export type VicAxis = 'V' | 'I' | 'C';
+
+export interface VicCriterion extends BaseEntity {
+  eixo: VicAxis;
+  nome: string;
+  peso: number; // os pesos de cada eixo devem somar 10
+  order: number;
+}
+
+export interface VicEvaluation extends BaseEntity {
+  companyId: ID;
+  projeto: string; // enquadramento da avaliação, ex. "Institucional"
+  notas: Record<string, number>; // criterionId -> nota 0..5
+  obs: Record<string, string>; // criterionId -> observação livre
+}

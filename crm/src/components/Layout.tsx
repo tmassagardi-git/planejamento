@@ -1,9 +1,10 @@
 import { NavLink, Outlet } from 'react-router-dom';
-import { Building2, Kanban, HeartHandshake, LayoutDashboard, Settings } from 'lucide-react';
+import { Building2, Kanban, HeartHandshake, LayoutDashboard, Settings, Target } from 'lucide-react';
 import clsx from 'clsx';
 
 const NAV = [
   { to: '/empresas', label: 'Empresas', icon: Building2 },
+  { to: '/vic', label: 'Matriz VIC', icon: Target },
   { to: '/funil', label: 'Funil de Vendas', icon: Kanban },
   { to: '/doacoes', label: 'Doações', icon: HeartHandshake },
   { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },

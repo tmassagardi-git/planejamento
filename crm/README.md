@@ -46,9 +46,17 @@ npm run preview
   pagamento). "Dar baixa" registra o pagamento de uma parcela.
 - **Dashboard** — arrecadado x previsto por mês, novos doadores por mês,
   distribuição por categoria/cota, funil de conversão por etapa.
+- **Matriz VIC** — qualificação de prospects pelo método **Vínculo, Interesse
+  e Capacidade**: cada empresa pode ter uma ou mais avaliações (uma por
+  projeto), com nota 0-5 em critérios ponderados por eixo. Acessível pela
+  guia **VIC** na ficha da empresa (logo depois de "Dados") ou pela página
+  **Matriz VIC** no menu, que mostra todas as avaliações num gráfico de
+  bolhas (Vínculo × Interesse, tamanho = Capacidade) com ranking e uma
+  visualização em lista, filtráveis por projeto.
 - **Configurações** — etapas do funil (criar/editar/reordenar/excluir),
-  cotas/categorias, estratégias, meios de pagamento e motivos de perda —
-  todos editáveis para se adaptar ao vocabulário da sua ONG.
+  cotas/categorias, estratégias, meios de pagamento, motivos de perda e os
+  critérios/pesos do Sistema VIC — todos editáveis para se adaptar ao
+  vocabulário da sua ONG.
 
 ## Backup dos dados
 
@@ -56,6 +64,15 @@ Como os dados ficam apenas no navegador (IndexedDB), use **Configurações →
 Backup dos dados** para exportar um `.json` regularmente. O mesmo arquivo
 pode ser reimportado (substitui todos os dados atuais) para restaurar ou
 migrar de máquina.
+
+### Dados iniciais do Sistema VIC
+
+Na primeira execução, o app carrega os 16 critérios padrão do método VIC
+(`src/lib/vic-seed-data.ts`) e importa as 68 empresas já pesquisadas e
+avaliadas na planilha original (casando por nome com empresas já
+cadastradas, quando existirem, ou criando novas). Critérios e pesos podem
+ser ajustados depois em Configurações — a soma dos pesos de cada eixo deve
+continuar somando 10.
 
 ## Arquitetura (pensada para migração futura ao Lovable/Supabase)
 
@@ -93,6 +110,8 @@ O modelo de dados (`src/lib/types.ts`) já foi desenhado pensando nisso:
 | `Donation`       | `donations`                   | FK `company_id`, `opportunity_id` |
 | `Installment`    | `installments`                | FK `donation_id` |
 | `Catalog`        | pode virar tabelas `categories`, `strategies`, `payment_methods`, `loss_reasons` (ou permanecer 1 registro de config) | — |
+| `VicCriterion`   | `vic_criteria`                | eixo `V`/`I`/`C`, peso |
+| `VicEvaluation`  | `vic_evaluations`              | FK `company_id`; `notas`/`obs` → `jsonb` |
 
 Convenções usadas (facilitam o `CREATE TABLE` no Postgres):
 - `id`: `uuid` (gerado com `uuid` no cliente — pode continuar assim ou virar

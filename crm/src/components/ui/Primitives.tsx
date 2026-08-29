@@ -1,5 +1,6 @@
 import { type ButtonHTMLAttributes, type InputHTMLAttributes, type SelectHTMLAttributes, type TextareaHTMLAttributes, forwardRef } from 'react';
 import clsx from 'clsx';
+import { twMerge } from 'tailwind-merge';
 
 type Variant = 'primary' | 'secondary' | 'ghost' | 'danger';
 
@@ -17,7 +18,7 @@ export function Button({
 }: ButtonHTMLAttributes<HTMLButtonElement> & { variant?: Variant }) {
   return (
     <button
-      className={clsx(
+      className={twMerge(
         'inline-flex items-center justify-center gap-1.5 rounded-md px-3 py-2 text-sm font-medium transition-colors disabled:cursor-not-allowed',
         variantClasses[variant],
         className,
@@ -31,7 +32,7 @@ export const Input = forwardRef<HTMLInputElement, InputHTMLAttributes<HTMLInputE
   ({ className, ...props }, ref) => (
     <input
       ref={ref}
-      className={clsx(
+      className={twMerge(
         'w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500',
         className,
       )}
@@ -45,7 +46,7 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaHTMLAttributes<H
   ({ className, ...props }, ref) => (
     <textarea
       ref={ref}
-      className={clsx(
+      className={twMerge(
         'w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500',
         className,
       )}
@@ -59,7 +60,7 @@ export const Select = forwardRef<HTMLSelectElement, SelectHTMLAttributes<HTMLSel
   ({ className, children, ...props }, ref) => (
     <select
       ref={ref}
-      className={clsx(
+      className={twMerge(
         'w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500',
         className,
       )}
@@ -111,5 +112,5 @@ export function Badge({
 }
 
 export function Card({ children, className }: { children: React.ReactNode; className?: string }) {
-  return <div className={clsx('rounded-lg border border-slate-200 bg-white', className)}>{children}</div>;
+  return <div className={twMerge('rounded-lg border border-slate-200 bg-white', className)}>{children}</div>;
 }

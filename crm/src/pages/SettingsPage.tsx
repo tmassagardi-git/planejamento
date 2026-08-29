@@ -4,6 +4,7 @@ import { db } from '../lib/db';
 import { Button, Field, Input, Select } from '../components/ui/Primitives';
 import { StagesEditor } from '../components/StagesEditor';
 import { CatalogListEditor } from '../components/CatalogListEditor';
+import { VicCriteriaEditor } from '../components/vic/VicCriteriaEditor';
 import { createFunnel, renameFunnel } from '../services/funnels';
 import { downloadBackup, exportBackup, importBackup, type BackupData } from '../services/backup';
 import { Download, Plus, Upload } from 'lucide-react';
@@ -103,6 +104,8 @@ export function SettingsPage() {
             <CatalogListEditor title="Motivos de perda" field="lossReasons" items={catalog.lossReasons} />
           </>
         )}
+
+        <VicCriteriaEditor />
 
         <div className="rounded-lg border border-slate-200 bg-white p-4">
           <h3 className="mb-1 text-sm font-semibold text-slate-800">Backup dos dados</h3>

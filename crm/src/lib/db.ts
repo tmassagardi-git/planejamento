@@ -8,6 +8,8 @@ import type {
   Donation,
   Installment,
   Catalog,
+  VicCriterion,
+  VicEvaluation,
 } from './types';
 
 class CrmDatabase extends Dexie {
@@ -19,6 +21,8 @@ class CrmDatabase extends Dexie {
   donations!: EntityTable<Donation, 'id'>;
   installments!: EntityTable<Installment, 'id'>;
   catalog!: EntityTable<Catalog, 'id'>;
+  vicCriteria!: EntityTable<VicCriterion, 'id'>;
+  vicEvaluations!: EntityTable<VicEvaluation, 'id'>;
 
   constructor() {
     super('crm-doadores');
@@ -31,6 +35,10 @@ class CrmDatabase extends Dexie {
       donations: 'id, companyId, opportunityId, status, startDate',
       installments: 'id, donationId, number, dueDate, status',
       catalog: 'id',
+    });
+    this.version(2).stores({
+      vicCriteria: 'id, eixo, order',
+      vicEvaluations: 'id, companyId, projeto',
     });
   }
 }

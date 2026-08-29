@@ -8,13 +8,24 @@ import { Modal, ConfirmDialog } from './ui/Modal';
 import { CompanyForm } from './CompanyForm';
 import { ContactForm } from './ContactForm';
 import { DonationCard } from './DonationCard';
+import { CompanyVicTab } from './vic/CompanyVicTab';
 import { deleteContact } from '../services/contacts';
 import { formatCurrency } from '../lib/format';
 import type { Contact } from '../lib/types';
 import { Pencil, Phone, Plus, Trash2 } from 'lucide-react';
 
-export function CompanyDetailDrawer({ companyId, onClose }: { companyId: string; onClose: () => void }) {
-  const [tab, setTab] = useState('dados');
+export function CompanyDetailDrawer({
+  companyId,
+  onClose,
+  initialTab = 'dados',
+  initialVicEvaluationId,
+}: {
+  companyId: string;
+  onClose: () => void;
+  initialTab?: string;
+  initialVicEvaluationId?: string;
+}) {
+  const [tab, setTab] = useState(initialTab);
   const [editing, setEditing] = useState(false);
   const [addingContact, setAddingContact] = useState(false);
   const [editingContact, setEditingContact] = useState<Contact | null>(null);
@@ -35,6 +46,7 @@ export function CompanyDetailDrawer({ companyId, onClose }: { companyId: string;
       onClose={onClose}
       title={company.name}
       subtitle={company.segment}
+      width="xl"
       headerActions={
         <Button variant="secondary" className="px-2 py-1.5 text-xs" onClick={() => setEditing(true)}>
           <Pencil size={14} /> Editar
@@ -44,6 +56,7 @@ export function CompanyDetailDrawer({ companyId, onClose }: { companyId: string;
       <Tabs
         tabs={[
           { key: 'dados', label: 'Dados' },
+          { key: 'vic', label: 'VIC' },
           { key: 'contatos', label: `Contatos (${contacts?.length ?? 0})` },
           { key: 'doacoes', label: `Histórico de Doações (${donations?.length ?? 0})` },
         ]}
@@ -87,6 +100,12 @@ export function CompanyDetailDrawer({ companyId, onClose }: { companyId: string;
               <div className="whitespace-pre-wrap text-sm text-slate-700">{company.notes || '—'}</div>
             </Field>
           </div>
+        </div>
+      )}
+
+      {tab === 'vic' && (
+        <div className="mt-5">
+          <CompanyVicTab companyId={companyId} initialEvaluationId={initialVicEvaluationId} />
         </div>
       )}
 

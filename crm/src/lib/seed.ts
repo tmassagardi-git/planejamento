@@ -1,5 +1,6 @@
 import { v4 as uuid } from 'uuid';
 import { db } from './db';
+import { importVicSeedData } from '../services/vic';
 
 // Popula o banco local (IndexedDB) na primeira execução: um funil padrão com
 // etapas comuns de captação de empresas doadoras, e um catálogo inicial de
@@ -50,5 +51,13 @@ export async function ensureSeeded() {
       createdAt: now,
       updatedAt: now,
     });
+  }
+
+  // Importa, uma única vez, os 16 critérios padrão do Sistema VIC e as 68
+  // empresas já pesquisadas/avaliadas na planilha original (casando por
+  // nome com empresas já cadastradas, quando existirem).
+  const vicEvaluationsCount = await db.vicEvaluations.count();
+  if (vicEvaluationsCount === 0) {
+    await importVicSeedData();
   }
 }
