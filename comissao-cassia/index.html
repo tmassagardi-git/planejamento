@@ -1340,16 +1340,17 @@ function buildMonthlySeries() {
   });
 }
 
+const NICE_STEPS = [1, 1.2, 1.5, 2, 2.5, 3, 4, 5, 6, 8, 10];
+
+// Passos mais finos que o 1/2/5/10 clássico: o topo do eixo fica coladinho
+// no maior valor (só uma folga pequena), em vez de pular para a próxima
+// dezena "redonda" e deixar um vão grande de espaço em branco no topo.
 function niceMax(value) {
   if (!(value > 0)) return 100;
   const exp = Math.floor(Math.log10(value));
   const base = Math.pow(10, exp);
   const fraction = value / base;
-  let niceFraction;
-  if (fraction <= 1) niceFraction = 1;
-  else if (fraction <= 2) niceFraction = 2;
-  else if (fraction <= 5) niceFraction = 5;
-  else niceFraction = 10;
+  const niceFraction = NICE_STEPS.find(s => s >= fraction) ?? 10;
   return niceFraction * base;
 }
 
@@ -1408,7 +1409,7 @@ function renderCombinedChartSVG(months) {
     ...months.map(m => Math.max(m.receitaTotal, m.comissaoPaga, m.primeiraParcela)),
     meta
   );
-  const yMax = niceMax(rawMax * 1.15);
+  const yMax = niceMax(rawMax * 1.06);
   const { width, height, baseline, gridLines } = chartFrame(months, yMax);
 
   const goalY = baseline - (meta / yMax) * CHART_HEIGHT;
