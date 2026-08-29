@@ -559,7 +559,11 @@
         </div>
         <div>
           <label>Mês de assinatura</label>
-          <input type="month" id="fMes" required>
+          <input type="month" id="fMes" required onchange="onMesAssinaturaFormChange(this.value)">
+        </div>
+        <div>
+          <label>Mês da 1ª parcela</label>
+          <input type="month" id="fMesParcela" required onchange="onMesParcelaFormChange()">
         </div>
         <div style="grid-column: 1 / -1;">
           <label>Observações (opcional)</label>
@@ -574,6 +578,11 @@
         sempre sobre os 6 primeiros meses do contrato (ou menos, se o contrato tiver menos de 6 meses). O valor de
         cada mês pode ser editado depois, inclusive além do 6º mês, para acompanhar o valor efetivo que o contrato
         segue trazendo enquanto estiver ativo — só não gera mais comissão depois dos 6 primeiros meses.
+        <br><br>
+        O mês de assinatura é o que conta para o bônus desafio (soma dos contratos assinados naquele mês). Já a
+        agenda de parcelas — e portanto os 6 meses de comissão — começa no mês da 1ª parcela, que pode ser
+        diferente (ex: contrato assinado em um mês, mas a cobrança só começa no seguinte). Por padrão os dois vêm
+        preenchidos iguais; ajuste o mês da 1ª parcela se for diferente.
       </p>
     </div>
   </div>
@@ -594,6 +603,7 @@
               <th>Duração</th>
               <th>Faixa</th>
               <th>Assinatura</th>
+              <th>1ª parcela</th>
               <th>Comissão prevista</th>
               <th>Comissão paga</th>
               <th>Receita total do contrato</th>
@@ -708,13 +718,17 @@ function loadState() {
 function migrateState(parsed) {
   parsed.contratos.forEach(c => {
     if (typeof c.observacoes !== 'string') c.observacoes = '';
+    // Versões antigas só tinham "mês de assinatura" e usavam ele também como
+    // âncora das parcelas. Agora são dois campos separados; para dados já
+    // salvos, a 1ª parcela começa igual à assinatura.
+    if (typeof c.mesPrimeiraParcela !== 'string') c.mesPrimeiraParcela = c.mesAssinatura;
     const numComissionaveis = Math.min(6, c.duracaoMeses);
     c.installments.forEach((inst, idx) => {
       if (typeof inst.comissionavel !== 'boolean') inst.comissionavel = idx < numComissionaveis;
     });
     for (let i = c.installments.length; i < c.duracaoMeses; i++) {
       c.installments.push({
-        mes: addMonths(c.mesAssinatura, i),
+        mes: addMonths(c.mesPrimeiraParcela, i),
         valor: c.valorMensal,
         comissionavel: i < numComissionaveis,
         pago: false,
@@ -733,6 +747,14 @@ function saveState() {
 
 let state = loadState();
 let expandedContracts = new Set();
+let parcelaTouched = false; // true assim que o usuário editar "Mês da 1ª parcela" manualmente
+
+function onMesAssinaturaFormChange(value) {
+  if (!parcelaTouched) document.getElementById('fMesParcela').value = value;
+}
+function onMesParcelaFormChange() {
+  parcelaTouched = true;
+}
 
 // ---------- Regras de negócio ----------
 
@@ -781,8 +803,8 @@ function fmtMonth(yyyymm) {
 }
 
 function contratoAtivoNoMes(contrato, mes) {
-  const fim = addMonths(contrato.mesAssinatura, contrato.duracaoMeses - 1);
-  return mes >= contrato.mesAssinatura && mes <= fim;
+  const fim = addMonths(contrato.mesPrimeiraParcela, contrato.duracaoMeses - 1);
+  return mes >= contrato.mesPrimeiraParcela && mes <= fim;
 }
 
 // Valor efetivamente registrado para o contrato naquele mês (0 se o contrato
@@ -805,18 +827,20 @@ function addContract(ev) {
   const valorMensal = parseFloat(document.getElementById('fValor').value);
   const duracaoMeses = parseInt(document.getElementById('fDuracao').value, 10);
   const mesAssinatura = document.getElementById('fMes').value;
+  const mesPrimeiraParcela = document.getElementById('fMesParcela').value || mesAssinatura;
   const observacoes = document.getElementById('fObs').value.trim();
 
   if (!cliente || !(valorMensal > 0) || !(duracaoMeses > 0) || !mesAssinatura) return;
 
   // Gera uma parcela para cada mês da duração do contrato (não só os 6
   // primeiros), para acompanhar o valor efetivo enquanto ele estiver ativo.
-  // Só os primeiros 6 meses geram comissão.
+  // Só os primeiros 6 meses geram comissão. A agenda das parcelas é ancorada
+  // no mês da 1ª parcela, que pode ser diferente do mês de assinatura.
   const numComissionaveis = Math.min(6, duracaoMeses);
   const installments = [];
   for (let i = 0; i < duracaoMeses; i++) {
     installments.push({
-      mes: addMonths(mesAssinatura, i),
+      mes: addMonths(mesPrimeiraParcela, i),
       valor: valorMensal,
       comissionavel: i < numComissionaveis,
       pago: false,
@@ -832,6 +856,7 @@ function addContract(ev) {
     valorMensal,
     duracaoMeses,
     mesAssinatura,
+    mesPrimeiraParcela,
     observacoes,
     installments
   });
@@ -839,6 +864,8 @@ function addContract(ev) {
   saveState();
   document.getElementById('formNovo').reset();
   document.getElementById('fMes').value = currentMonth();
+  document.getElementById('fMesParcela').value = currentMonth();
+  parcelaTouched = false;
   renderAll();
 }
 
@@ -849,12 +876,43 @@ function updateObservacoes(contractId, value) {
   saveState();
 }
 
-// Muda o mês de assinatura e realinha as parcelas (que são geradas por
-// posição a partir da assinatura), sem perder valores/pagamentos já lançados.
+function updateCliente(contractId, value) {
+  const c = state.contratos.find(x => x.id === contractId);
+  if (!c) return;
+  const trimmed = value.trim();
+  if (!trimmed) { renderAll(); return; } // nome não pode ficar vazio; desfaz mostrando o valor salvo
+  c.cliente = trimmed;
+  saveState();
+  renderAll();
+}
+
+function updateValorMensal(contractId, value) {
+  const c = state.contratos.find(x => x.id === contractId);
+  if (!c) return;
+  const v = parseFloat(value);
+  if (!(v > 0)) { renderAll(); return; }
+  c.valorMensal = v;
+  saveState();
+  renderAll();
+}
+
+// Muda o mês de assinatura (usado para o cálculo do bônus desafio, que é por
+// mês de assinatura) sem mexer na agenda das parcelas, que é ancorada no mês
+// da 1ª parcela.
 function updateMesAssinatura(contractId, newValue) {
   const c = state.contratos.find(x => x.id === contractId);
   if (!c || !newValue) return;
   c.mesAssinatura = newValue;
+  saveState();
+  renderAll();
+}
+
+// Muda o mês da 1ª parcela e realinha as parcelas (que são geradas por
+// posição a partir dela), sem perder valores/pagamentos já lançados.
+function updateMesPrimeiraParcela(contractId, newValue) {
+  const c = state.contratos.find(x => x.id === contractId);
+  if (!c || !newValue) return;
+  c.mesPrimeiraParcela = newValue;
   c.installments.forEach((inst, idx) => {
     inst.mes = addMonths(newValue, idx);
   });
@@ -1170,21 +1228,25 @@ function renderContracts() {
     return `
       <tr class="contract-row">
         <td><button class="link" onclick="toggleInstallments('${c.id}')">${isOpen ? '▴' : '▾'}</button></td>
-        <td>${escapeHtml(c.cliente)}${c.observacoes ? ` <span title="${escapeHtml(c.observacoes)}" style="cursor:help;">📝</span>` : ''}</td>
-        <td class="money">${fmtBRL(c.valorMensal)}</td>
+        <td>
+          <input type="text" value="${escapeHtml(c.cliente)}" style="min-width:150px" onchange="updateCliente('${c.id}', this.value)">
+          ${c.observacoes ? ` <span title="${escapeHtml(c.observacoes)}" style="cursor:help;">📝</span>` : ''}
+        </td>
+        <td><input type="number" step="0.01" min="0" value="${c.valorMensal}" style="max-width:130px" onchange="updateValorMensal('${c.id}', this.value)"></td>
         <td>${c.duracaoMeses} meses</td>
         <td>
           <span class="badge ${cat.key}">${cat.label} · ${(taxa * 100).toFixed(1).replace('.0','')}%</span>
           ${bonus ? '<span class="badge bonus">🏆 bônus 2x</span>' : ''}
         </td>
         <td><input type="month" value="${c.mesAssinatura}" style="min-width:150px" onchange="updateMesAssinatura('${c.id}', this.value)"></td>
+        <td><input type="month" value="${c.mesPrimeiraParcela}" style="min-width:150px" onchange="updateMesPrimeiraParcela('${c.id}', this.value)"></td>
         <td class="money">${fmtBRL(previsto)}</td>
         <td class="money">${fmtBRL(pago)}</td>
         <td class="money">${fmtBRL(receitaTotal)}</td>
         <td class="row-actions"><button class="danger small" onclick="deleteContract('${c.id}')">Excluir</button></td>
       </tr>
       <tr class="installments-row" id="${rowId}" style="display:${isOpen ? 'table-row' : 'none'};">
-        <td colspan="10">
+        <td colspan="11">
           <div class="installments-inner">
             <div style="margin-bottom: 12px; max-width: 480px;">
               <label>Observações do contrato</label>
@@ -1564,6 +1626,7 @@ function renderAll() {
 // init
 document.getElementById('monthFilter').value = currentMonth();
 document.getElementById('fMes').value = currentMonth();
+document.getElementById('fMesParcela').value = currentMonth();
 renderAll();
 </script>
 </body>
