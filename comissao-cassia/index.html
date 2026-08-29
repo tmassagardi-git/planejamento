@@ -40,6 +40,10 @@
     --cat3: #ad560d;
     --cat3-soft: #fbead6;
 
+    --chart-contracts: #0e8f6d;
+    --chart-paid: #1baf7a;
+    --chart-pending: #eb6834;
+
     --shadow: 0 1px 2px rgba(20, 30, 27, 0.04), 0 6px 20px -12px rgba(20, 30, 27, 0.12);
     --radius: 12px;
     --radius-sm: 8px;
@@ -84,6 +88,10 @@
       --cat3: #f0a565;
       --cat3-soft: #3a2410;
 
+      --chart-contracts: #28a483;
+      --chart-paid: #199e70;
+      --chart-pending: #d95926;
+
       --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 8px 24px -14px rgba(0, 0, 0, 0.55);
       color-scheme: dark;
     }
@@ -120,6 +128,10 @@
     --cat2-soft: #241a3c;
     --cat3: #f0a565;
     --cat3-soft: #3a2410;
+
+    --chart-contracts: #28a483;
+    --chart-paid: #199e70;
+    --chart-pending: #d95926;
 
     --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 8px 24px -14px rgba(0, 0, 0, 0.55);
     color-scheme: dark;
@@ -242,7 +254,7 @@
     align-items: end;
   }
   label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 5px; font-weight: 500; }
-  input, select {
+  input, select, textarea {
     width: 100%;
     padding: 9px 11px;
     border: 1px solid var(--border);
@@ -252,11 +264,12 @@
     background: var(--surface);
     color: var(--ink);
   }
+  textarea { resize: vertical; min-height: 56px; line-height: 1.4; }
   input[type="number"], input[type="month"], input[type="date"] {
     font-family: var(--font-mono);
     font-variant-numeric: tabular-nums;
   }
-  input:focus, select:focus { outline: 2px solid var(--primary); outline-offset: 1px; }
+  input:focus, select:focus, textarea:focus { outline: 2px solid var(--primary); outline-offset: 1px; }
   input[disabled] { background: var(--surface-2); color: var(--muted); }
 
   button {
@@ -364,6 +377,51 @@
   }
   .total-line span.dim { color: var(--muted); font-weight: 500; font-family: var(--font-body); }
 
+  .dashboard-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(420px, 1fr));
+    gap: 16px;
+  }
+  .chart-card {
+    position: relative;
+    background: var(--surface-2);
+    border: 1px solid var(--border-soft);
+    border-radius: var(--radius-sm);
+    padding: 16px 16px 8px;
+  }
+  .chart-title {
+    font-family: var(--font-display);
+    font-weight: 600;
+    font-size: 15px;
+    margin: 0 0 10px;
+    letter-spacing: -0.005em;
+  }
+  .chart-legend { display: flex; gap: 16px; font-size: 12px; color: var(--muted); margin-bottom: 8px; }
+  .chart-legend .swatch { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 5px; vertical-align: -1px; }
+  .chart-card .table-scroll { overflow-x: auto; }
+  .chart-card svg { display: block; }
+  .chart-axis-label { fill: var(--muted); font-size: 10.5px; font-family: var(--font-body); }
+  .chart-grid-line { stroke: var(--border); stroke-width: 1; shape-rendering: crispEdges; }
+  .chart-goal-line { stroke: var(--gold); stroke-width: 1.5; stroke-dasharray: 4 3; }
+  .chart-goal-label { fill: var(--gold-strong); font-size: 10px; font-weight: 600; font-family: var(--font-body); }
+  .chart-hit { fill: transparent; cursor: pointer; }
+  .chart-hit:focus-visible { outline: 2px solid var(--ink); outline-offset: -2px; }
+  .chart-col.hovered .chart-mark { filter: brightness(0.92); }
+  .chart-tooltip {
+    position: absolute;
+    pointer-events: none;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 8px 11px;
+    font-size: 12.5px;
+    line-height: 1.4;
+    box-shadow: var(--shadow);
+    max-width: 240px;
+    z-index: 5;
+    color: var(--ink);
+  }
+
   ::placeholder { color: var(--muted); opacity: 0.6; }
 
   @media (prefers-reduced-motion: reduce) {
@@ -384,6 +442,47 @@
   <div id="bonusAlerts"></div>
 
   <div class="cards" id="summaryCards"></div>
+
+  <div class="panel" id="panelDashboard">
+    <div class="panel-head" onclick="togglePanel('panelDashboard')">
+      <h2>Dashboard</h2>
+      <span class="chevron">▾</span>
+    </div>
+    <div class="panel-body">
+      <div id="dashboardGrid" class="dashboard-grid">
+        <div class="chart-card" id="cardContracts">
+          <h3 class="chart-title">Valor de contratos ativos por mês</h3>
+          <div class="table-scroll"><div id="chartContracts"></div></div>
+          <div class="chart-tooltip" id="ttContracts" hidden></div>
+        </div>
+        <div class="chart-card" id="cardCommission">
+          <h3 class="chart-title">Comissão por mês</h3>
+          <div class="chart-legend">
+            <span><span class="swatch" style="background:var(--chart-paid)"></span>Pago</span>
+            <span><span class="swatch" style="background:var(--chart-pending)"></span>Pendente</span>
+          </div>
+          <div class="table-scroll"><div id="chartCommission"></div></div>
+          <div class="chart-tooltip" id="ttCommission" hidden></div>
+        </div>
+      </div>
+      <div id="dashboardEmpty" class="empty" style="display:none;">Cadastre um contrato para ver os gráficos do dashboard.</div>
+      <div class="toolbar" style="margin-top:14px; margin-bottom:0;">
+        <span class="config-note" style="margin:0; flex:1;">
+          Contratos continuam aparecendo aqui enquanto estiverem ativos, mesmo depois de pagas as comissões dos 6
+          primeiros meses — assim dá para ver quanto de valor efetivo cada contrato segue trazendo para a empresa.
+        </span>
+        <button class="secondary small" onclick="toggleDashboardTable(this)">Ver dados em tabela</button>
+      </div>
+      <div class="table-scroll" id="dashboardTableWrap" style="display:none; margin-top:12px;">
+        <table>
+          <thead>
+            <tr><th>Mês</th><th>Valor de contratos ativos</th><th>Comissão paga</th><th>Comissão pendente</th><th>Total comissão</th></tr>
+          </thead>
+          <tbody id="dashboardTableBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
 
   <div class="panel" id="panelConfig">
     <div class="panel-head" onclick="togglePanel('panelConfig')">
@@ -436,6 +535,10 @@
           <label>Mês de assinatura</label>
           <input type="month" id="fMes" required>
         </div>
+        <div style="grid-column: 1 / -1;">
+          <label>Observações (opcional)</label>
+          <textarea id="fObs" rows="2" placeholder="Ex: valor pode variar conforme uso mensal do cliente"></textarea>
+        </div>
         <div>
           <button type="submit">Adicionar contrato</button>
         </div>
@@ -443,7 +546,8 @@
       <p class="config-note" style="margin-top: 14px;">
         A faixa de comissão vem da duração: até 12 meses = 5%; 13 a 35 meses = 7,5%; acima de 36 meses = 10% —
         sempre sobre os 6 primeiros meses do contrato (ou menos, se o contrato tiver menos de 6 meses). O valor de
-        cada uma das parcelas pode ser editado depois, para contratos com valor variável mês a mês.
+        cada mês pode ser editado depois, inclusive além do 6º mês, para acompanhar o valor efetivo que o contrato
+        segue trazendo enquanto estiver ativo — só não gera mais comissão depois dos 6 primeiros meses.
       </p>
     </div>
   </div>
@@ -466,6 +570,7 @@
               <th>Assinatura</th>
               <th>Comissão prevista</th>
               <th>Comissão paga</th>
+              <th>Receita total do contrato</th>
               <th></th>
             </tr>
           </thead>
@@ -553,6 +658,7 @@ function loadState() {
     const parsed = JSON.parse(raw);
     if (!parsed.settings) parsed.settings = defaultState().settings;
     if (!parsed.contratos) parsed.contratos = [];
+    migrateState(parsed);
     return parsed;
   } catch (e) {
     console.error('Falha ao carregar dados, iniciando estado padrão.', e);
@@ -560,11 +666,37 @@ function loadState() {
   }
 }
 
+// Estende contratos salvos por versões antigas (que só guardavam os 6 meses
+// comissionáveis) para cobrir a duração inteira do contrato, e garante os
+// campos novos (observações, flag de comissionável).
+function migrateState(parsed) {
+  parsed.contratos.forEach(c => {
+    if (typeof c.observacoes !== 'string') c.observacoes = '';
+    const numComissionaveis = Math.min(6, c.duracaoMeses);
+    c.installments.forEach((inst, idx) => {
+      if (typeof inst.comissionavel !== 'boolean') inst.comissionavel = idx < numComissionaveis;
+    });
+    for (let i = c.installments.length; i < c.duracaoMeses; i++) {
+      c.installments.push({
+        mes: addMonths(c.mesAssinatura, i),
+        valor: c.valorMensal,
+        comissionavel: i < numComissionaveis,
+        pago: false,
+        dataPagamento: null,
+        valorPago: null,
+        comissaoPaga: null
+      });
+    }
+  });
+  return parsed;
+}
+
 function saveState() {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
 }
 
 let state = loadState();
+let expandedContracts = new Set();
 
 // ---------- Regras de negócio ----------
 
@@ -617,6 +749,18 @@ function contratoAtivoNoMes(contrato, mes) {
   return mes >= contrato.mesAssinatura && mes <= fim;
 }
 
+// Valor efetivamente registrado para o contrato naquele mês (0 se o contrato
+// não estava ativo). Usa o valor da parcela daquele mês, que pode ter sido
+// editado, em vez do valor mensal original do contrato.
+function valorNoMes(contrato, mes) {
+  const inst = contrato.installments.find(i => i.mes === mes);
+  return inst ? Number(inst.valor) : 0;
+}
+
+function totalAtivoNoMes(mes) {
+  return state.contratos.reduce((s, c) => s + valorNoMes(c, mes), 0);
+}
+
 // ---------- Ações ----------
 
 function addContract(ev) {
@@ -625,15 +769,20 @@ function addContract(ev) {
   const valorMensal = parseFloat(document.getElementById('fValor').value);
   const duracaoMeses = parseInt(document.getElementById('fDuracao').value, 10);
   const mesAssinatura = document.getElementById('fMes').value;
+  const observacoes = document.getElementById('fObs').value.trim();
 
   if (!cliente || !(valorMensal > 0) || !(duracaoMeses > 0) || !mesAssinatura) return;
 
-  const numParcelas = Math.min(6, duracaoMeses);
+  // Gera uma parcela para cada mês da duração do contrato (não só os 6
+  // primeiros), para acompanhar o valor efetivo enquanto ele estiver ativo.
+  // Só os primeiros 6 meses geram comissão.
+  const numComissionaveis = Math.min(6, duracaoMeses);
   const installments = [];
-  for (let i = 0; i < numParcelas; i++) {
+  for (let i = 0; i < duracaoMeses; i++) {
     installments.push({
       mes: addMonths(mesAssinatura, i),
       valor: valorMensal,
+      comissionavel: i < numComissionaveis,
       pago: false,
       dataPagamento: null,
       valorPago: null,
@@ -647,12 +796,21 @@ function addContract(ev) {
     valorMensal,
     duracaoMeses,
     mesAssinatura,
+    observacoes,
     installments
   });
 
   saveState();
   document.getElementById('formNovo').reset();
+  document.getElementById('fMes').value = currentMonth();
   renderAll();
+}
+
+function updateObservacoes(contractId, value) {
+  const c = state.contratos.find(x => x.id === contractId);
+  if (!c) return;
+  c.observacoes = value;
+  saveState();
 }
 
 function deleteContract(id) {
@@ -676,6 +834,7 @@ function toggleInstallmentPaid(contractId, idx, checked) {
   const c = state.contratos.find(x => x.id === contractId);
   if (!c) return;
   const inst = c.installments[idx];
+  if (!inst.comissionavel) return; // sem comissão fora dos 6 primeiros meses
   if (checked) {
     const { taxa } = taxaAtual(c);
     inst.pago = true;
@@ -710,11 +869,17 @@ function togglePanel(id) {
   document.getElementById(id).classList.toggle('collapsed');
 }
 
+function toggleInstallments(contractId) {
+  if (expandedContracts.has(contractId)) expandedContracts.delete(contractId);
+  else expandedContracts.add(contractId);
+  renderContracts();
+}
+
 function markAllVisible(paid) {
   const mes = document.getElementById('monthFilter').value;
   state.contratos.forEach(c => {
     c.installments.forEach((inst, idx) => {
-      if (inst.mes === mes) toggleInstallmentPaidSilent(c, idx, paid);
+      if (inst.mes === mes && inst.comissionavel) toggleInstallmentPaidSilent(c, idx, paid);
     });
   });
   saveState();
@@ -790,9 +955,7 @@ function importData(ev) {
 
 function renderSummary() {
   const mesAtual = currentMonth();
-  const totalAtivo = state.contratos
-    .filter(c => contratoAtivoNoMes(c, mesAtual))
-    .reduce((s, c) => s + Number(c.valorMensal), 0);
+  const totalAtivo = totalAtivoNoMes(mesAtual);
 
   let faixaFixa = state.settings.salarioBase;
   let faixaLabel = 'Base (abaixo de R$ 40.000 ativos)';
@@ -803,7 +966,7 @@ function renderSummary() {
   state.contratos.forEach(c => {
     const { taxa } = taxaAtual(c);
     c.installments.forEach(inst => {
-      if (inst.mes === mesAtual) {
+      if (inst.mes === mesAtual && inst.comissionavel) {
         if (inst.pago) comissaoPagaMes += inst.comissaoPaga;
         else comissaoPrevistaMes += inst.valor * taxa;
       }
@@ -876,13 +1039,16 @@ function renderContracts() {
 
   tbody.innerHTML = sorted.map(c => {
     const { taxa, cat, bonus } = taxaAtual(c);
-    const previsto = c.installments.reduce((s, i) => s + (i.pago ? i.comissaoPaga : i.valor * taxa), 0);
-    const pago = c.installments.reduce((s, i) => s + (i.pago ? i.comissaoPaga : 0), 0);
+    const comissionaveis = c.installments.filter(i => i.comissionavel);
+    const previsto = comissionaveis.reduce((s, i) => s + (i.pago ? i.comissaoPaga : i.valor * taxa), 0);
+    const pago = comissionaveis.reduce((s, i) => s + (i.pago ? i.comissaoPaga : 0), 0);
+    const receitaTotal = c.installments.reduce((s, i) => s + Number(i.valor), 0);
     const rowId = 'inst_' + c.id;
+    const isOpen = expandedContracts.has(c.id);
     return `
       <tr class="contract-row">
-        <td><button class="link" onclick="toggleInstallments('${rowId}')">▾</button></td>
-        <td>${escapeHtml(c.cliente)}</td>
+        <td><button class="link" onclick="toggleInstallments('${c.id}')">${isOpen ? '▴' : '▾'}</button></td>
+        <td>${escapeHtml(c.cliente)}${c.observacoes ? ` <span title="${escapeHtml(c.observacoes)}" style="cursor:help;">📝</span>` : ''}</td>
         <td class="money">${fmtBRL(c.valorMensal)}</td>
         <td>${c.duracaoMeses} meses</td>
         <td>
@@ -892,15 +1058,21 @@ function renderContracts() {
         <td>${fmtMonth(c.mesAssinatura)}</td>
         <td class="money">${fmtBRL(previsto)}</td>
         <td class="money">${fmtBRL(pago)}</td>
+        <td class="money">${fmtBRL(receitaTotal)}</td>
         <td class="row-actions"><button class="danger small" onclick="deleteContract('${c.id}')">Excluir</button></td>
       </tr>
-      <tr class="installments-row" id="${rowId}" style="display:none;">
-        <td colspan="9">
+      <tr class="installments-row" id="${rowId}" style="display:${isOpen ? 'table-row' : 'none'};">
+        <td colspan="10">
           <div class="installments-inner">
+            <div style="margin-bottom: 12px; max-width: 480px;">
+              <label>Observações do contrato</label>
+              <textarea rows="2" placeholder="Ex: valor pode variar conforme uso mensal do cliente"
+                onchange="updateObservacoes('${c.id}', this.value)">${escapeHtml(c.observacoes || '')}</textarea>
+            </div>
             <div class="table-scroll">
             <table>
               <thead>
-                <tr><th>Mês</th><th>Valor do mês (editável)</th><th>Comissão (${(taxa*100).toFixed(1).replace('.0','')}%)</th><th>Status</th><th>Pago em</th><th>Baixa</th></tr>
+                <tr><th>Mês</th><th>Valor do mês (editável)</th><th>Comissão</th><th>Status</th><th>Pago em</th><th>Baixa</th></tr>
               </thead>
               <tbody>
                 ${c.installments.map((inst, idx) => `
@@ -911,15 +1083,19 @@ function renderContracts() {
                         style="max-width:130px"
                         onchange="updateInstallmentValue('${c.id}', ${idx}, this.value)">
                     </td>
-                    <td class="money">${fmtBRL(inst.pago ? inst.comissaoPaga : inst.valor * taxa)}</td>
-                    <td><span class="badge ${inst.pago ? 'paid' : 'pending'}">${inst.pago ? 'Pago' : 'Pendente'}</span></td>
+                    <td class="money">${inst.comissionavel ? fmtBRL(inst.pago ? inst.comissaoPaga : inst.valor * taxa) : '—'}</td>
+                    <td>${inst.comissionavel
+                      ? `<span class="badge ${inst.pago ? 'paid' : 'pending'}">${inst.pago ? 'Pago' : 'Pendente'}</span>`
+                      : '<span class="badge inactive">Fora da comissão</span>'}</td>
                     <td>${inst.dataPagamento ? new Date(inst.dataPagamento + 'T00:00:00').toLocaleDateString('pt-BR') : '-'}</td>
                     <td>
-                      <label class="paid-check">
-                        <input type="checkbox" ${inst.pago ? 'checked' : ''}
-                          onchange="toggleInstallmentPaid('${c.id}', ${idx}, this.checked)">
-                        dar baixa
-                      </label>
+                      ${inst.comissionavel ? `
+                        <label class="paid-check">
+                          <input type="checkbox" ${inst.pago ? 'checked' : ''}
+                            onchange="toggleInstallmentPaid('${c.id}', ${idx}, this.checked)">
+                          dar baixa
+                        </label>
+                      ` : ''}
                     </td>
                   </tr>
                 `).join('')}
@@ -933,11 +1109,6 @@ function renderContracts() {
   }).join('');
 }
 
-function toggleInstallments(rowId) {
-  const row = document.getElementById(rowId);
-  row.style.display = row.style.display === 'none' ? 'table-row' : 'none';
-}
-
 function renderMonthly() {
   const mesInput = document.getElementById('monthFilter');
   if (!mesInput.value) mesInput.value = currentMonth();
@@ -947,7 +1118,7 @@ function renderMonthly() {
   state.contratos.forEach(c => {
     const { taxa, cat, bonus } = taxaAtual(c);
     c.installments.forEach((inst, idx) => {
-      if (inst.mes === mes) {
+      if (inst.mes === mes && inst.comissionavel) {
         rows.push({ c, inst, idx, taxa, cat, bonus });
       }
     });
@@ -996,12 +1167,265 @@ function escapeHtml(str) {
   return div.innerHTML;
 }
 
+// ---------- Dashboard (gráficos) ----------
+
+const CHART_MARGIN = { left: 56, right: 16, top: 24, bottom: 30 };
+const CHART_HEIGHT = 190;
+const BAR_SLOT = 56;
+const BAR_WIDTH = 22;
+const CHART_GAP = 2;
+
+function monthsRange(start, end) {
+  const arr = [];
+  let cur = start;
+  while (cur <= end) { arr.push(cur); cur = addMonths(cur, 1); }
+  return arr;
+}
+
+// Uma linha por mês: receita ativa total (todos os contratos ativos naquele
+// mês, mesmo fora do período de comissão) e comissão paga/pendente (só das
+// parcelas comissionáveis).
+function buildMonthlySeries() {
+  if (state.contratos.length === 0) return [];
+  const map = {};
+  state.contratos.forEach(c => {
+    const { taxa } = taxaAtual(c);
+    c.installments.forEach(inst => {
+      if (!map[inst.mes]) map[inst.mes] = { receitaTotal: 0, comissaoPaga: 0, comissaoPendente: 0 };
+      map[inst.mes].receitaTotal += Number(inst.valor);
+      if (inst.comissionavel) {
+        if (inst.pago) map[inst.mes].comissaoPaga += inst.comissaoPaga;
+        else map[inst.mes].comissaoPendente += inst.valor * taxa;
+      }
+    });
+  });
+  const months = Object.keys(map).sort();
+  const allMonths = monthsRange(months[0], months[months.length - 1]);
+  return allMonths.map(mes => {
+    const d = map[mes] || { receitaTotal: 0, comissaoPaga: 0, comissaoPendente: 0 };
+    return {
+      mes,
+      receitaTotal: d.receitaTotal,
+      comissaoPaga: d.comissaoPaga,
+      comissaoPendente: d.comissaoPendente,
+      comissaoTotal: d.comissaoPaga + d.comissaoPendente,
+      novosContratos: cohortTotal(mes),
+      bonus: bonusAtingido(mes)
+    };
+  });
+}
+
+function niceMax(value) {
+  if (!(value > 0)) return 100;
+  const exp = Math.floor(Math.log10(value));
+  const base = Math.pow(10, exp);
+  const fraction = value / base;
+  let niceFraction;
+  if (fraction <= 1) niceFraction = 1;
+  else if (fraction <= 2) niceFraction = 2;
+  else if (fraction <= 5) niceFraction = 5;
+  else niceFraction = 10;
+  return niceFraction * base;
+}
+
+function fmtCompactBRL(v) {
+  if (v === 0) return 'R$ 0';
+  const formatted = new Intl.NumberFormat('pt-BR', { notation: 'compact', compactDisplay: 'short', maximumFractionDigits: 1 }).format(v);
+  return 'R$ ' + formatted;
+}
+
+function shortMonth(yyyymm) {
+  const [y, m] = yyyymm.split('-');
+  const meses = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+  return meses[Number(m) - 1] + '/' + y.slice(2);
+}
+
+// Path de retângulo com cantos arredondados só no topo (base sempre reta,
+// encostada na linha de base do gráfico).
+function roundedTopPath(x, y, w, h, r) {
+  if (h <= 0) return '';
+  r = Math.min(r, w / 2, h);
+  return `M${x},${y + h} L${x},${y + r} Q${x},${y} ${x + r},${y} L${x + w - r},${y} Q${x + w},${y} ${x + w},${y + r} L${x + w},${y + h} Z`;
+}
+
+function chartFrame(months, yMax) {
+  const plotW = months.length * BAR_SLOT;
+  const width = CHART_MARGIN.left + plotW + CHART_MARGIN.right;
+  const height = CHART_MARGIN.top + CHART_HEIGHT + CHART_MARGIN.bottom;
+  const baseline = CHART_MARGIN.top + CHART_HEIGHT;
+  const yTicks = [0, 0.25, 0.5, 0.75, 1].map(f => f * yMax);
+  const gridLines = yTicks.map(t => {
+    const y = baseline - (t / yMax) * CHART_HEIGHT;
+    return `
+      <line class="chart-grid-line" x1="${CHART_MARGIN.left}" x2="${width - CHART_MARGIN.right}" y1="${y}" y2="${y}"></line>
+      <text class="chart-axis-label" x="${CHART_MARGIN.left - 8}" y="${y + 3}" text-anchor="end">${fmtCompactBRL(t)}</text>
+    `;
+  }).join('');
+  return { width, height, baseline, gridLines };
+}
+
+function renderContractsChartSVG(months) {
+  const meta = Number(state.settings.metaDesafio);
+  const rawMax = Math.max(...months.map(m => m.receitaTotal), meta);
+  const yMax = niceMax(rawMax * 1.15);
+  const { width, height, baseline, gridLines } = chartFrame(months, yMax);
+
+  const goalY = baseline - (meta / yMax) * CHART_HEIGHT;
+  const goalLine = meta > 0 ? `
+    <line class="chart-goal-line" x1="${CHART_MARGIN.left}" x2="${width - CHART_MARGIN.right}" y1="${goalY}" y2="${goalY}"></line>
+    <text class="chart-goal-label" x="${width - CHART_MARGIN.right}" y="${goalY - 5}" text-anchor="end">Meta desafio · ${fmtCompactBRL(meta)}</text>
+  ` : '';
+
+  const bars = months.map((m, i) => {
+    const x = CHART_MARGIN.left + i * BAR_SLOT + (BAR_SLOT - BAR_WIDTH) / 2;
+    const h = (m.receitaTotal / yMax) * CHART_HEIGHT;
+    const y = baseline - h;
+    const path = roundedTopPath(x, y, BAR_WIDTH, h, 4);
+    let tooltip = `${fmtMonth(m.mes)} — ${fmtBRL(m.receitaTotal)} em contratos ativos`;
+    if (m.novosContratos > 0) tooltip += ` · novos contratos assinados: ${fmtBRL(m.novosContratos)}`;
+    if (m.bonus) tooltip += ' · 🏆 meta desafio batida';
+    return `
+      <g class="chart-col">
+        ${path ? `<path class="chart-mark" style="fill:var(--chart-contracts)" d="${path}"></path>` : ''}
+        <rect class="chart-hit" x="${CHART_MARGIN.left + i * BAR_SLOT}" y="${CHART_MARGIN.top}" width="${BAR_SLOT}" height="${CHART_HEIGHT}"
+          tabindex="0" role="img" aria-label="${escapeHtml(tooltip)}" data-tooltip="${escapeHtml(tooltip)}"></rect>
+        ${m.bonus ? `<text x="${x + BAR_WIDTH / 2}" y="${Math.max(y - 8, CHART_MARGIN.top - 4)}" text-anchor="middle" font-size="12">🏆</text>` : ''}
+        <text class="chart-axis-label" x="${x + BAR_WIDTH / 2}" y="${baseline + 18}" text-anchor="middle">${shortMonth(m.mes)}</text>
+      </g>
+    `;
+  }).join('');
+
+  return `<svg viewBox="0 0 ${width} ${height}" width="${width}" height="${height}" role="img" aria-label="Valor de contratos ativos por mês">
+    ${gridLines}
+    ${bars}
+    ${goalLine}
+  </svg>`;
+}
+
+function renderCommissionChartSVG(months) {
+  const yMax = niceMax(Math.max(...months.map(m => m.comissaoTotal), 1) * 1.15);
+  const { width, height, baseline, gridLines } = chartFrame(months, yMax);
+
+  const bars = months.map((m, i) => {
+    const x = CHART_MARGIN.left + i * BAR_SLOT + (BAR_SLOT - BAR_WIDTH) / 2;
+    const hPaga = (m.comissaoPaga / yMax) * CHART_HEIGHT;
+    const hPendente = (m.comissaoPendente / yMax) * CHART_HEIGHT;
+    const tooltip = `${fmtMonth(m.mes)} — ${fmtBRL(m.comissaoPaga)} paga, ${fmtBRL(m.comissaoPendente)} pendente (total ${fmtBRL(m.comissaoTotal)})`;
+
+    let cursorBottom = baseline;
+    const segments = [
+      { h: hPaga, colorVar: '--chart-paid' },
+      { h: hPendente, colorVar: '--chart-pending' }
+    ].filter(s => s.h > 0);
+
+    let segMarkup = '';
+    segments.forEach((seg, idx) => {
+      const top = cursorBottom - seg.h;
+      const isTop = idx === segments.length - 1;
+      segMarkup += isTop
+        ? `<path class="chart-mark" style="fill:var(${seg.colorVar})" d="${roundedTopPath(x, top, BAR_WIDTH, seg.h, 4)}"></path>`
+        : `<rect class="chart-mark" style="fill:var(${seg.colorVar})" x="${x}" y="${top}" width="${BAR_WIDTH}" height="${seg.h}"></rect>`;
+      cursorBottom = top - CHART_GAP;
+    });
+
+    return `
+      <g class="chart-col">
+        ${segMarkup}
+        <rect class="chart-hit" x="${CHART_MARGIN.left + i * BAR_SLOT}" y="${CHART_MARGIN.top}" width="${BAR_SLOT}" height="${CHART_HEIGHT}"
+          tabindex="0" role="img" aria-label="${escapeHtml(tooltip)}" data-tooltip="${escapeHtml(tooltip)}"></rect>
+        <text class="chart-axis-label" x="${x + BAR_WIDTH / 2}" y="${baseline + 18}" text-anchor="middle">${shortMonth(m.mes)}</text>
+      </g>
+    `;
+  }).join('');
+
+  return `<svg viewBox="0 0 ${width} ${height}" width="${width}" height="${height}" role="img" aria-label="Comissão por mês, paga e pendente">
+    ${gridLines}
+    ${bars}
+  </svg>`;
+}
+
+function initChartTooltip(cardId, tooltipId) {
+  const card = document.getElementById(cardId);
+  const tip = document.getElementById(tooltipId);
+
+  function show(e, target) {
+    tip.textContent = target.getAttribute('data-tooltip');
+    tip.hidden = false;
+    const cardRect = card.getBoundingClientRect();
+    let left = e.clientX - cardRect.left + 14;
+    let top = e.clientY - cardRect.top + 14;
+    tip.style.left = left + 'px';
+    tip.style.top = top + 'px';
+    requestAnimationFrame(() => {
+      const tipRect = tip.getBoundingClientRect();
+      if (tipRect.right > cardRect.right) tip.style.left = (left - tipRect.width - 28) + 'px';
+      if (tipRect.bottom > cardRect.bottom) tip.style.top = (top - tipRect.height - 28) + 'px';
+    });
+  }
+  function showAtFocus(target) {
+    const rect = target.getBoundingClientRect();
+    const cardRect = card.getBoundingClientRect();
+    tip.textContent = target.getAttribute('data-tooltip');
+    tip.hidden = false;
+    tip.style.left = (rect.left - cardRect.left) + 'px';
+    tip.style.top = Math.max(rect.top - cardRect.top - 8, 0) + 'px';
+  }
+  function hide() { tip.hidden = true; }
+
+  card.querySelectorAll('.chart-hit').forEach(hit => {
+    hit.addEventListener('pointerenter', () => hit.closest('.chart-col')?.classList.add('hovered'));
+    hit.addEventListener('pointermove', (e) => show(e, hit));
+    hit.addEventListener('pointerleave', () => { hide(); hit.closest('.chart-col')?.classList.remove('hovered'); });
+    hit.addEventListener('focus', () => { showAtFocus(hit); hit.closest('.chart-col')?.classList.add('hovered'); });
+    hit.addEventListener('blur', () => { hide(); hit.closest('.chart-col')?.classList.remove('hovered'); });
+  });
+}
+
+function renderDashboard() {
+  const months = buildMonthlySeries();
+  const gridEl = document.getElementById('dashboardGrid');
+  const emptyEl = document.getElementById('dashboardEmpty');
+  const tableBody = document.getElementById('dashboardTableBody');
+
+  if (months.length === 0) {
+    gridEl.style.display = 'none';
+    emptyEl.style.display = 'block';
+    tableBody.innerHTML = '';
+    return;
+  }
+  emptyEl.style.display = 'none';
+  gridEl.style.display = 'grid';
+
+  document.getElementById('chartContracts').innerHTML = renderContractsChartSVG(months);
+  document.getElementById('chartCommission').innerHTML = renderCommissionChartSVG(months);
+  initChartTooltip('cardContracts', 'ttContracts');
+  initChartTooltip('cardCommission', 'ttCommission');
+
+  tableBody.innerHTML = months.map(m => `
+    <tr>
+      <td>${fmtMonth(m.mes)}</td>
+      <td class="money">${fmtBRL(m.receitaTotal)}</td>
+      <td class="money">${fmtBRL(m.comissaoPaga)}</td>
+      <td class="money">${fmtBRL(m.comissaoPendente)}</td>
+      <td class="money">${fmtBRL(m.comissaoTotal)}</td>
+    </tr>
+  `).join('');
+}
+
+function toggleDashboardTable(btn) {
+  const wrap = document.getElementById('dashboardTableWrap');
+  const show = wrap.style.display === 'none';
+  wrap.style.display = show ? 'block' : 'none';
+  btn.textContent = show ? 'Ocultar tabela' : 'Ver dados em tabela';
+}
+
 function renderAll() {
   renderSummary();
   renderBonusAlerts();
   renderConfig();
   renderContracts();
   renderMonthly();
+  renderDashboard();
 }
 
 // init
