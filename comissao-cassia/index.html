@@ -40,9 +40,10 @@
     --cat3: #ad560d;
     --cat3-soft: #fbead6;
 
-    --chart-contracts: #0e8f6d;
+    --chart-total: #2a78d6;
     --chart-paid: #1baf7a;
     --chart-pending: #eb6834;
+    --chart-new: #eda100;
 
     --shadow: 0 1px 2px rgba(20, 30, 27, 0.04), 0 6px 20px -12px rgba(20, 30, 27, 0.12);
     --radius: 12px;
@@ -88,9 +89,10 @@
       --cat3: #f0a565;
       --cat3-soft: #3a2410;
 
-      --chart-contracts: #28a483;
+      --chart-total: #3987e5;
       --chart-paid: #199e70;
       --chart-pending: #d95926;
+      --chart-new: #c98500;
 
       --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 8px 24px -14px rgba(0, 0, 0, 0.55);
       color-scheme: dark;
@@ -129,9 +131,10 @@
     --cat3: #f0a565;
     --cat3-soft: #3a2410;
 
-    --chart-contracts: #28a483;
+    --chart-total: #3987e5;
     --chart-paid: #199e70;
     --chart-pending: #d95926;
+    --chart-new: #c98500;
 
     --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 8px 24px -14px rgba(0, 0, 0, 0.55);
     color-scheme: dark;
@@ -480,9 +483,10 @@
         <div class="chart-card" id="cardCombined">
           <h3 class="chart-title">Contratos e comissão por mês</h3>
           <div class="chart-legend">
-            <span><span class="legend-line" style="background:var(--chart-contracts)"></span>Contratos ativos</span>
-            <span><span class="swatch" style="background:var(--chart-paid)"></span>Comissão paga</span>
-            <span><span class="swatch" style="background:var(--chart-pending)"></span>Comissão pendente</span>
+            <span><span class="swatch" style="background:var(--chart-total)"></span>Resultado total de entrada do mês</span>
+            <span><span class="legend-line" style="background:var(--chart-paid)"></span>Comissão paga</span>
+            <span><span class="legend-line" style="background:var(--chart-pending)"></span>Comissão pendente</span>
+            <span><span class="legend-line" style="background:var(--chart-new)"></span>Soma da 1ª parcela (novos contratos)</span>
           </div>
           <div class="table-scroll"><div id="chartCombined"></div></div>
           <div class="chart-tooltip" id="ttCombined" hidden></div>
@@ -499,7 +503,7 @@
       <div class="table-scroll" id="dashboardTableWrap" style="display:none; margin-top:12px;">
         <table>
           <thead>
-            <tr><th>Mês</th><th>Valor de contratos ativos</th><th>Comissão paga</th><th>Comissão pendente</th><th>Total comissão</th></tr>
+            <tr><th>Mês</th><th>Resultado total de entrada</th><th>Comissão paga</th><th>Comissão pendente</th><th>Total comissão</th><th>Soma da 1ª parcela</th></tr>
           </thead>
           <tbody id="dashboardTableBody"></tbody>
         </table>
@@ -1311,9 +1315,10 @@ function buildMonthlySeries() {
   const map = {};
   state.contratos.forEach(c => {
     const { taxa } = taxaAtual(c);
-    c.installments.forEach(inst => {
-      if (!map[inst.mes]) map[inst.mes] = { receitaTotal: 0, comissaoPaga: 0, comissaoPendente: 0 };
+    c.installments.forEach((inst, idx) => {
+      if (!map[inst.mes]) map[inst.mes] = { receitaTotal: 0, comissaoPaga: 0, comissaoPendente: 0, primeiraParcela: 0 };
       map[inst.mes].receitaTotal += Number(inst.valor);
+      if (idx === 0) map[inst.mes].primeiraParcela += Number(inst.valor);
       if (inst.comissionavel) {
         if (inst.pago) map[inst.mes].comissaoPaga += inst.comissaoPaga;
         else map[inst.mes].comissaoPendente += inst.valor * taxa;
@@ -1323,14 +1328,14 @@ function buildMonthlySeries() {
   const months = Object.keys(map).sort();
   const allMonths = monthsRange(months[0], months[months.length - 1]);
   return allMonths.map(mes => {
-    const d = map[mes] || { receitaTotal: 0, comissaoPaga: 0, comissaoPendente: 0 };
+    const d = map[mes] || { receitaTotal: 0, comissaoPaga: 0, comissaoPendente: 0, primeiraParcela: 0 };
     return {
       mes,
       receitaTotal: d.receitaTotal,
       comissaoPaga: d.comissaoPaga,
       comissaoPendente: d.comissaoPendente,
       comissaoTotal: d.comissaoPaga + d.comissaoPendente,
-      novosContratos: cohortTotal(mes),
+      primeiraParcela: d.primeiraParcela,
       bonus: bonusAtingido(mes)
     };
   });
@@ -1389,9 +1394,21 @@ function chartFrame(months, yMax) {
 // contratos ativos entra como linha (soma dos valores dos contratos daquele
 // mês) e a comissão como colunas empilhadas (paga/pendente). Um único eixo —
 // nunca um gráfico de eixo duplo, que engana a leitura da comparação.
+// Uma coluna (resultado total de entrada do mês) e três linhas (comissão
+// paga, comissão pendente, soma da 1ª parcela dos contratos assinados no
+// mês) — tudo na mesma escala em R$, um único eixo.
+const COMBINED_LINE_SERIES = [
+  { key: 'comissaoPaga', colorVar: '--chart-paid' },
+  { key: 'comissaoPendente', colorVar: '--chart-pending' },
+  { key: 'primeiraParcela', colorVar: '--chart-new' }
+];
+
 function renderCombinedChartSVG(months) {
   const meta = Number(state.settings.metaDesafio);
-  const rawMax = Math.max(...months.map(m => Math.max(m.receitaTotal, m.comissaoTotal)), meta);
+  const rawMax = Math.max(
+    ...months.map(m => Math.max(m.receitaTotal, m.comissaoPaga, m.comissaoPendente, m.primeiraParcela)),
+    meta
+  );
   const yMax = niceMax(rawMax * 1.15);
   const { width, height, baseline, gridLines } = chartFrame(months, yMax);
 
@@ -1405,40 +1422,34 @@ function renderCombinedChartSVG(months) {
   let crosshairMarkup = '';
   let dotsMarkup = '';
   let hitMarkup = '';
-  const linePoints = [];
+  const seriesPoints = COMBINED_LINE_SERIES.map(() => []);
 
   months.forEach((m, i) => {
     const x0 = CHART_MARGIN.left + i * BAR_SLOT;
     const x = x0 + (BAR_SLOT - BAR_WIDTH) / 2;
     const lineX = x + BAR_WIDTH / 2;
 
-    const hPaga = (m.comissaoPaga / yMax) * CHART_HEIGHT;
-    const hPendente = (m.comissaoPendente / yMax) * CHART_HEIGHT;
-    let cursorBottom = baseline;
-    const segments = [
-      { h: hPaga, colorVar: '--chart-paid' },
-      { h: hPendente, colorVar: '--chart-pending' }
-    ].filter(s => s.h > 0);
-    segments.forEach((seg, idx) => {
-      const top = cursorBottom - seg.h;
-      const isTop = idx === segments.length - 1;
-      barsMarkup += isTop
-        ? `<path class="chart-mark" data-idx="${i}" style="fill:var(${seg.colorVar})" d="${roundedTopPath(x, top, BAR_WIDTH, seg.h, 4)}"></path>`
-        : `<rect class="chart-mark" data-idx="${i}" style="fill:var(${seg.colorVar})" x="${x}" y="${top}" width="${BAR_WIDTH}" height="${seg.h}"></rect>`;
-      cursorBottom = top - CHART_GAP;
-    });
-
-    const lineY = baseline - (m.receitaTotal / yMax) * CHART_HEIGHT;
-    linePoints.push({ x: lineX, y: lineY });
+    const hTotal = (m.receitaTotal / yMax) * CHART_HEIGHT;
+    const yTotal = baseline - hTotal;
+    if (hTotal > 0) {
+      barsMarkup += `<path class="chart-mark" data-idx="${i}" style="fill:var(--chart-total)" d="${roundedTopPath(x, yTotal, BAR_WIDTH, hTotal, 4)}"></path>`;
+    }
 
     crosshairMarkup += `<line class="chart-crosshair" data-idx="${i}" x1="${lineX}" x2="${lineX}" y1="${CHART_MARGIN.top}" y2="${baseline}"></line>`;
 
-    dotsMarkup += `<circle class="chart-mark chart-dot" data-idx="${i}" cx="${lineX}" cy="${lineY}" r="4.5" style="fill:var(--chart-contracts)" stroke="var(--surface-2)" stroke-width="2"></circle>`;
-    if (m.bonus) dotsMarkup += `<text x="${lineX}" y="${Math.max(lineY - 10, CHART_MARGIN.top - 2)}" text-anchor="middle" font-size="12">🏆</text>`;
+    COMBINED_LINE_SERIES.forEach((serie, s) => {
+      const val = m[serie.key];
+      const y = baseline - (val / yMax) * CHART_HEIGHT;
+      seriesPoints[s].push({ x: lineX, y });
+      dotsMarkup += `<circle class="chart-mark chart-dot" data-idx="${i}" cx="${lineX}" cy="${y}" r="4" style="fill:var(${serie.colorVar})" stroke="var(--surface-2)" stroke-width="2"></circle>`;
+      if (serie.key === 'primeiraParcela' && m.bonus) {
+        dotsMarkup += `<text x="${lineX}" y="${Math.max(y - 10, CHART_MARGIN.top - 2)}" text-anchor="middle" font-size="12">🏆</text>`;
+      }
+    });
 
-    let tooltip = `${fmtMonth(m.mes)} — ${fmtBRL(m.receitaTotal)} em contratos ativos`;
+    let tooltip = `${fmtMonth(m.mes)} — ${fmtBRL(m.receitaTotal)} de resultado total no mês`;
     tooltip += ` · comissão: ${fmtBRL(m.comissaoPaga)} paga, ${fmtBRL(m.comissaoPendente)} pendente`;
-    if (m.novosContratos > 0) tooltip += ` · novos contratos assinados: ${fmtBRL(m.novosContratos)}`;
+    tooltip += ` · soma da 1ª parcela: ${fmtBRL(m.primeiraParcela)}`;
     if (m.bonus) tooltip += ' · 🏆 meta desafio batida';
     hitMarkup += `
       <rect class="chart-hit" data-idx="${i}" x="${x0}" y="${CHART_MARGIN.top}" width="${BAR_SLOT}" height="${CHART_HEIGHT}"
@@ -1447,14 +1458,16 @@ function renderCombinedChartSVG(months) {
     `;
   });
 
-  const linePath = linePoints.map((p, i) => (i === 0 ? 'M' : 'L') + p.x + ',' + p.y).join(' ');
-  const lineMarkup = `<path d="${linePath}" fill="none" style="stroke:var(--chart-contracts)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"></path>`;
+  const linesMarkup = COMBINED_LINE_SERIES.map((serie, s) => {
+    const path = seriesPoints[s].map((p, i) => (i === 0 ? 'M' : 'L') + p.x + ',' + p.y).join(' ');
+    return `<path d="${path}" fill="none" style="stroke:var(${serie.colorVar})" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"></path>`;
+  }).join('');
 
   return `<svg viewBox="0 0 ${width} ${height}" width="${width}" height="${height}" role="img" aria-label="Contratos e comissão por mês">
     ${gridLines}
     ${crosshairMarkup}
     ${barsMarkup}
-    ${lineMarkup}
+    ${linesMarkup}
     ${dotsMarkup}
     ${goalLine}
     ${hitMarkup}
@@ -1527,6 +1540,7 @@ function renderDashboard() {
       <td class="money">${fmtBRL(m.comissaoPaga)}</td>
       <td class="money">${fmtBRL(m.comissaoPendente)}</td>
       <td class="money">${fmtBRL(m.comissaoTotal)}</td>
+      <td class="money">${fmtBRL(m.primeiraParcela)}</td>
     </tr>
   `).join('');
 }
