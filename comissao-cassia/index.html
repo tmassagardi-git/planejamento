@@ -1228,18 +1228,15 @@ function renderContracts() {
     return `
       <tr class="contract-row">
         <td><button class="link" onclick="toggleInstallments('${c.id}')">${isOpen ? '▴' : '▾'}</button></td>
-        <td>
-          <input type="text" value="${escapeHtml(c.cliente)}" style="min-width:150px" onchange="updateCliente('${c.id}', this.value)">
-          ${c.observacoes ? ` <span title="${escapeHtml(c.observacoes)}" style="cursor:help;">📝</span>` : ''}
-        </td>
-        <td><input type="number" step="0.01" min="0" value="${c.valorMensal}" style="max-width:130px" onchange="updateValorMensal('${c.id}', this.value)"></td>
+        <td>${escapeHtml(c.cliente)}${c.observacoes ? ` <span title="${escapeHtml(c.observacoes)}" style="cursor:help;">📝</span>` : ''}</td>
+        <td class="money">${fmtBRL(c.valorMensal)}</td>
         <td>${c.duracaoMeses} meses</td>
         <td>
           <span class="badge ${cat.key}">${cat.label} · ${(taxa * 100).toFixed(1).replace('.0','')}%</span>
           ${bonus ? '<span class="badge bonus">🏆 bônus 2x</span>' : ''}
         </td>
-        <td><input type="month" value="${c.mesAssinatura}" style="min-width:150px" onchange="updateMesAssinatura('${c.id}', this.value)"></td>
-        <td><input type="month" value="${c.mesPrimeiraParcela}" style="min-width:150px" onchange="updateMesPrimeiraParcela('${c.id}', this.value)"></td>
+        <td>${fmtMonth(c.mesAssinatura)}</td>
+        <td>${fmtMonth(c.mesPrimeiraParcela)}</td>
         <td class="money">${fmtBRL(previsto)}</td>
         <td class="money">${fmtBRL(pago)}</td>
         <td class="money">${fmtBRL(receitaTotal)}</td>
@@ -1248,6 +1245,24 @@ function renderContracts() {
       <tr class="installments-row" id="${rowId}" style="display:${isOpen ? 'table-row' : 'none'};">
         <td colspan="11">
           <div class="installments-inner">
+            <form class="grid" style="margin-bottom: 16px;" onsubmit="return false;">
+              <div>
+                <label>Cliente / contrato</label>
+                <input type="text" value="${escapeHtml(c.cliente)}" onchange="updateCliente('${c.id}', this.value)">
+              </div>
+              <div>
+                <label>Valor mensal do contrato (R$)</label>
+                <input type="number" step="0.01" min="0" value="${c.valorMensal}" onchange="updateValorMensal('${c.id}', this.value)">
+              </div>
+              <div>
+                <label>Mês de assinatura</label>
+                <input type="month" value="${c.mesAssinatura}" onchange="updateMesAssinatura('${c.id}', this.value)">
+              </div>
+              <div>
+                <label>Mês da 1ª parcela</label>
+                <input type="month" value="${c.mesPrimeiraParcela}" onchange="updateMesPrimeiraParcela('${c.id}', this.value)">
+              </div>
+            </form>
             <div style="margin-bottom: 12px; max-width: 480px;">
               <label>Observações do contrato</label>
               <textarea rows="2" placeholder="Ex: valor pode variar conforme uso mensal do cliente"
