@@ -1,0 +1,776 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Controle de Comissão — Cassia</title>
+<style>
+  :root {
+    --bg: #f4f6f9;
+    --card: #ffffff;
+    --border: #e2e6ec;
+    --text: #1f2733;
+    --muted: #6b7684;
+    --primary: #2f6fed;
+    --primary-dark: #1f4fc4;
+    --green: #1a9c5c;
+    --green-bg: #e7f8ef;
+    --orange: #c8730a;
+    --orange-bg: #fdf1de;
+    --red: #d0342c;
+    --red-bg: #fce9e8;
+    --gold-bg: #fff6d8;
+    --gold-border: #e8c547;
+    --radius: 10px;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    padding: 24px;
+    line-height: 1.4;
+  }
+  h1 { font-size: 22px; margin: 0 0 4px; }
+  h2 { font-size: 16px; margin: 0 0 12px; }
+  .subtitle { color: var(--muted); font-size: 13px; margin: 0 0 20px; }
+  .wrap { max-width: 1180px; margin: 0 auto; }
+
+  .cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 14px;
+    margin-bottom: 22px;
+  }
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px 18px;
+  }
+  .card .label { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: .03em; }
+  .card .value { font-size: 24px; font-weight: 700; margin-top: 6px; }
+  .card .hint { font-size: 12px; color: var(--muted); margin-top: 4px; }
+  .card.tier-active { border-color: var(--green); background: var(--green-bg); }
+
+  .panel {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 18px 20px;
+    margin-bottom: 20px;
+  }
+  .panel-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    cursor: pointer;
+  }
+  .panel-head h2 { margin: 0; }
+  .panel-body { margin-top: 14px; }
+  .chevron { transition: transform .15s; color: var(--muted); font-size: 13px; }
+  .collapsed .chevron { transform: rotate(-90deg); }
+  .collapsed .panel-body { display: none; }
+
+  form.grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 12px;
+    align-items: end;
+  }
+  label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 4px; }
+  input, select {
+    width: 100%;
+    padding: 8px 10px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    font-size: 14px;
+    background: #fff;
+    color: var(--text);
+  }
+  input:focus, select:focus { outline: 2px solid var(--primary); outline-offset: -1px; }
+  input[disabled] { background: #f1f2f5; color: var(--muted); }
+
+  button {
+    cursor: pointer;
+    border: none;
+    border-radius: 6px;
+    padding: 9px 16px;
+    font-size: 14px;
+    font-weight: 600;
+    background: var(--primary);
+    color: #fff;
+  }
+  button:hover { background: var(--primary-dark); }
+  button.secondary { background: #eef1f6; color: var(--text); }
+  button.secondary:hover { background: #dfe4ec; }
+  button.danger { background: var(--red-bg); color: var(--red); }
+  button.danger:hover { background: #f6d3d1; }
+  button.small { padding: 5px 10px; font-size: 12px; }
+  button.link { background: none; color: var(--primary); padding: 2px 4px; font-weight: 600; }
+  button.link:hover { background: none; text-decoration: underline; }
+
+  table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+  th, td { text-align: left; padding: 9px 10px; border-bottom: 1px solid var(--border); }
+  th { color: var(--muted); font-weight: 600; font-size: 12px; text-transform: uppercase; letter-spacing: .02em; }
+  tr.contract-row:hover { background: #fafbfd; }
+  tr.installments-row td { padding: 0; background: #fbfcfe; }
+  .installments-inner { padding: 10px 14px 16px 34px; }
+
+  .badge {
+    display: inline-block;
+    padding: 2px 9px;
+    border-radius: 20px;
+    font-size: 11.5px;
+    font-weight: 700;
+  }
+  .badge.cat1 { background: #e8f0fe; color: #1a56c4; }
+  .badge.cat2 { background: #eee3fb; color: #6c2bd9; }
+  .badge.cat3 { background: #fde9d7; color: #b5560a; }
+  .badge.bonus { background: var(--gold-bg); color: #8a6d00; border: 1px solid var(--gold-border); }
+  .badge.paid { background: var(--green-bg); color: var(--green); }
+  .badge.pending { background: var(--orange-bg); color: var(--orange); }
+  .badge.inactive { background: #eee; color: var(--muted); }
+
+  .row-actions { display: flex; gap: 6px; }
+
+  .empty { color: var(--muted); font-size: 13px; padding: 18px 4px; text-align: center; }
+
+  .alert {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: var(--gold-bg);
+    border: 1px solid var(--gold-border);
+    border-radius: 8px;
+    padding: 10px 14px;
+    font-size: 13.5px;
+    margin-bottom: 14px;
+  }
+  .alert .icon { font-size: 16px; }
+
+  .toolbar { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 14px; }
+  .toolbar-right { display: flex; gap: 8px; align-items: center; }
+
+  .month-input { width: 160px; }
+
+  .footer-note { color: var(--muted); font-size: 12px; margin-top: 30px; text-align: center; }
+
+  input[type="checkbox"] { width: auto; }
+  .paid-check { display: flex; align-items: center; gap: 6px; font-size: 13px; }
+
+  ::placeholder { color: #b3bac5; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Controle de Comissão — Cassia (Comercial)</h1>
+  <p class="subtitle">Cálculo automático conforme o Anexo I – Comissionamentos, Bônus e Gatilhos de Remuneração. Os dados ficam salvos apenas neste navegador.</p>
+
+  <div id="bonusAlerts"></div>
+
+  <div class="cards" id="summaryCards"></div>
+
+  <div class="panel" id="panelConfig">
+    <div class="panel-head" onclick="togglePanel('panelConfig')">
+      <h2>⚙️ Configurações da régua</h2>
+      <span class="chevron">▾</span>
+    </div>
+    <div class="panel-body">
+      <form class="grid" onsubmit="return false;">
+        <div>
+          <label>Meta desafio do mês (R$)</label>
+          <input type="number" id="cfgMeta" min="0" step="0.01" onchange="updateMeta()">
+        </div>
+        <div>
+          <label>Remuneração fixa base (antes do gatilho de R$ 40.000)</label>
+          <input type="number" id="cfgBase" min="0" step="0.01" onchange="updateBase()">
+        </div>
+        <div class="hint" style="grid-column: 1 / -1; color: var(--muted); font-size: 12.5px;">
+          Regra de bônus: se a soma dos contratos assinados em um mês atingir a meta desafio, o comissionamento
+          daquele lote de contratos dobra automaticamente (5%→10%, 7,5%→15%, 10%→20%) durante os 6 primeiros meses
+          de cada contrato daquele mês. A meta pode ser alterada aqui, mas segundo o contrato só vale para os meses
+          seguintes ao aviso à Cassia.
+          <br>Gatilho de remuneração fixa: contratos ativos somando R$ 40.000 → fixo de R$ 7.000; somando R$ 80.000 → fixo de R$ 9.000 (aplicado automaticamente abaixo).
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div class="panel" id="panelNew">
+    <div class="panel-head" onclick="togglePanel('panelNew')">
+      <h2>➕ Novo contrato</h2>
+      <span class="chevron">▾</span>
+    </div>
+    <div class="panel-body">
+      <form class="grid" id="formNovo" onsubmit="addContract(event)">
+        <div>
+          <label>Cliente / Contrato</label>
+          <input type="text" id="fCliente" placeholder="Nome do cliente" required>
+        </div>
+        <div>
+          <label>Valor mensal do contrato (R$)</label>
+          <input type="number" id="fValor" min="0" step="0.01" placeholder="0,00" required>
+        </div>
+        <div>
+          <label>Duração do contrato (meses)</label>
+          <input type="number" id="fDuracao" min="1" step="1" placeholder="ex: 12" required>
+        </div>
+        <div>
+          <label>Mês de assinatura</label>
+          <input type="month" id="fMes" required>
+        </div>
+        <div>
+          <button type="submit">Adicionar contrato</button>
+        </div>
+      </form>
+      <p class="hint" style="color: var(--muted); font-size: 12.5px; margin-top: 10px;">
+        A faixa de comissão é calculada automaticamente pela duração: até 12 meses = 5%; de 13 a 35 meses = 7,5%;
+        acima de 36 meses = 10% — sempre sobre os 6 primeiros meses do contrato (ou menos, se o contrato tiver
+        menos de 6 meses). O valor de cada uma das 6 parcelas pode ser editado depois, para contratos com valor
+        variável mês a mês.
+      </p>
+    </div>
+  </div>
+
+  <div class="panel" id="panelContracts">
+    <div class="panel-head" onclick="togglePanel('panelContracts')">
+      <h2>📋 Contratos</h2>
+      <span class="chevron">▾</span>
+    </div>
+    <div class="panel-body">
+      <table>
+        <thead>
+          <tr>
+            <th></th>
+            <th>Cliente</th>
+            <th>Valor mensal</th>
+            <th>Duração</th>
+            <th>Faixa</th>
+            <th>Assinatura</th>
+            <th>Comissão prevista</th>
+            <th>Comissão paga</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="contractsBody"></tbody>
+      </table>
+      <div id="contractsEmpty" class="empty" style="display:none;">Nenhum contrato cadastrado ainda.</div>
+    </div>
+  </div>
+
+  <div class="panel" id="panelMonthly">
+    <div class="panel-head" onclick="togglePanel('panelMonthly')">
+      <h2>💰 Baixa de pagamentos do mês</h2>
+      <span class="chevron">▾</span>
+    </div>
+    <div class="panel-body">
+      <div class="toolbar">
+        <div>
+          <label>Mês de referência</label>
+          <input type="month" id="monthFilter" class="month-input" onchange="renderMonthly()">
+        </div>
+        <div class="toolbar-right">
+          <button class="secondary small" onclick="markAllVisible(true)">Marcar todos como pagos</button>
+          <button class="secondary small" onclick="markAllVisible(false)">Desmarcar todos</button>
+        </div>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th>Cliente</th>
+            <th>Faixa</th>
+            <th>Valor do mês</th>
+            <th>Comissão</th>
+            <th>Status</th>
+            <th>Pago em</th>
+          </tr>
+        </thead>
+        <tbody id="monthlyBody"></tbody>
+      </table>
+      <div id="monthlyEmpty" class="empty" style="display:none;">Nenhuma parcela de comissão prevista para este mês.</div>
+      <div id="monthlyTotal" style="margin-top: 10px; font-size: 14px; font-weight: 700;"></div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-head" onclick="togglePanel(this.parentElement.id)" id="panelBackup">
+      <h2>🗄️ Backup dos dados</h2>
+      <span class="chevron">▾</span>
+    </div>
+    <div class="panel-body">
+      <p class="hint" style="color: var(--muted); font-size: 12.5px;">
+        Os dados são salvos automaticamente no navegador (localStorage). Use os botões abaixo para exportar um
+        arquivo de backup ou restaurar a partir de um arquivo salvo anteriormente.
+      </p>
+      <div style="display:flex; gap:10px;">
+        <button class="secondary" onclick="exportData()">Exportar backup (.json)</button>
+        <button class="secondary" onclick="document.getElementById('importFile').click()">Importar backup</button>
+        <input type="file" id="importFile" accept="application/json" style="display:none" onchange="importData(event)">
+      </div>
+    </div>
+  </div>
+
+  <p class="footer-note">Anexo I – Comissionamentos, Bônus e Gatilhos de Remuneração • Cálculo automático</p>
+</div>
+
+<script>
+const STORAGE_KEY = 'cassia_comissoes_v1';
+
+function defaultState() {
+  return {
+    settings: {
+      metaDesafio: 15000,
+      salarioBase: 5000
+    },
+    contratos: []
+  };
+}
+
+function loadState() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return defaultState();
+    const parsed = JSON.parse(raw);
+    if (!parsed.settings) parsed.settings = defaultState().settings;
+    if (!parsed.contratos) parsed.contratos = [];
+    return parsed;
+  } catch (e) {
+    console.error('Falha ao carregar dados, iniciando estado padrão.', e);
+    return defaultState();
+  }
+}
+
+function saveState() {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+}
+
+let state = loadState();
+
+// ---------- Regras de negócio ----------
+
+function categoriaPorDuracao(duracao) {
+  if (duracao <= 12) return { key: 'cat1', label: 'Até 12 meses', taxaBase: 0.05 };
+  if (duracao <= 35) return { key: 'cat2', label: '13 a 35 meses', taxaBase: 0.075 };
+  return { key: 'cat3', label: 'Acima de 36 meses', taxaBase: 0.10 };
+}
+
+function addMonths(yyyymm, n) {
+  const [y, m] = yyyymm.split('-').map(Number);
+  const d = new Date(y, m - 1 + n, 1);
+  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
+}
+
+function currentMonth() {
+  const d = new Date();
+  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
+}
+
+function cohortTotal(mesAssinatura) {
+  return state.contratos
+    .filter(c => c.mesAssinatura === mesAssinatura)
+    .reduce((sum, c) => sum + Number(c.valorMensal), 0);
+}
+
+function bonusAtingido(mesAssinatura) {
+  return cohortTotal(mesAssinatura) >= Number(state.settings.metaDesafio);
+}
+
+function taxaAtual(contrato) {
+  const cat = categoriaPorDuracao(contrato.duracaoMeses);
+  const bonus = bonusAtingido(contrato.mesAssinatura);
+  return { taxa: bonus ? cat.taxaBase * 2 : cat.taxaBase, cat, bonus };
+}
+
+function fmtBRL(v) {
+  return Number(v || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+}
+
+function fmtMonth(yyyymm) {
+  if (!yyyymm) return '-';
+  const [y, m] = yyyymm.split('-');
+  const meses = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+  return meses[Number(m) - 1] + '/' + y;
+}
+
+function contratoAtivoNoMes(contrato, mes) {
+  const fim = addMonths(contrato.mesAssinatura, contrato.duracaoMeses - 1);
+  return mes >= contrato.mesAssinatura && mes <= fim;
+}
+
+// ---------- Ações ----------
+
+function addContract(ev) {
+  ev.preventDefault();
+  const cliente = document.getElementById('fCliente').value.trim();
+  const valorMensal = parseFloat(document.getElementById('fValor').value);
+  const duracaoMeses = parseInt(document.getElementById('fDuracao').value, 10);
+  const mesAssinatura = document.getElementById('fMes').value;
+
+  if (!cliente || !(valorMensal > 0) || !(duracaoMeses > 0) || !mesAssinatura) return;
+
+  const numParcelas = Math.min(6, duracaoMeses);
+  const installments = [];
+  for (let i = 0; i < numParcelas; i++) {
+    installments.push({
+      mes: addMonths(mesAssinatura, i),
+      valor: valorMensal,
+      pago: false,
+      dataPagamento: null,
+      valorPago: null,
+      comissaoPaga: null
+    });
+  }
+
+  state.contratos.push({
+    id: 'c_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7),
+    cliente,
+    valorMensal,
+    duracaoMeses,
+    mesAssinatura,
+    installments
+  });
+
+  saveState();
+  document.getElementById('formNovo').reset();
+  renderAll();
+}
+
+function deleteContract(id) {
+  if (!confirm('Remover este contrato e todo o histórico de comissões dele?')) return;
+  state.contratos = state.contratos.filter(c => c.id !== id);
+  saveState();
+  renderAll();
+}
+
+function updateInstallmentValue(contractId, idx, newValue) {
+  const c = state.contratos.find(x => x.id === contractId);
+  if (!c) return;
+  const inst = c.installments[idx];
+  if (inst.pago) return; // não altera parcela já baixada
+  inst.valor = parseFloat(newValue) || 0;
+  saveState();
+  renderAll();
+}
+
+function toggleInstallmentPaid(contractId, idx, checked) {
+  const c = state.contratos.find(x => x.id === contractId);
+  if (!c) return;
+  const inst = c.installments[idx];
+  if (checked) {
+    const { taxa } = taxaAtual(c);
+    inst.pago = true;
+    inst.dataPagamento = new Date().toISOString().slice(0, 10);
+    inst.valorPago = inst.valor;
+    inst.comissaoPaga = inst.valor * taxa;
+  } else {
+    inst.pago = false;
+    inst.dataPagamento = null;
+    inst.valorPago = null;
+    inst.comissaoPaga = null;
+  }
+  saveState();
+  renderAll();
+}
+
+function updateMeta() {
+  const v = parseFloat(document.getElementById('cfgMeta').value);
+  state.settings.metaDesafio = v >= 0 ? v : state.settings.metaDesafio;
+  saveState();
+  renderAll();
+}
+
+function updateBase() {
+  const v = parseFloat(document.getElementById('cfgBase').value);
+  state.settings.salarioBase = v >= 0 ? v : state.settings.salarioBase;
+  saveState();
+  renderAll();
+}
+
+function togglePanel(id) {
+  document.getElementById(id).classList.toggle('collapsed');
+}
+
+function markAllVisible(paid) {
+  const mes = document.getElementById('monthFilter').value;
+  state.contratos.forEach(c => {
+    c.installments.forEach((inst, idx) => {
+      if (inst.mes === mes) toggleInstallmentPaidSilent(c, idx, paid);
+    });
+  });
+  saveState();
+  renderAll();
+}
+
+function toggleInstallmentPaidSilent(c, idx, checked) {
+  const inst = c.installments[idx];
+  if (checked) {
+    const { taxa } = taxaAtual(c);
+    inst.pago = true;
+    inst.dataPagamento = new Date().toISOString().slice(0, 10);
+    inst.valorPago = inst.valor;
+    inst.comissaoPaga = inst.valor * taxa;
+  } else {
+    inst.pago = false;
+    inst.dataPagamento = null;
+    inst.valorPago = null;
+    inst.comissaoPaga = null;
+  }
+}
+
+function exportData() {
+  const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'backup-comissoes-cassia-' + currentMonth() + '.json';
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+
+function importData(ev) {
+  const file = ev.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    try {
+      const parsed = JSON.parse(reader.result);
+      if (!parsed.contratos || !parsed.settings) throw new Error('Formato inválido');
+      if (!confirm('Isso vai substituir todos os dados atuais pelos dados do arquivo. Continuar?')) return;
+      state = parsed;
+      saveState();
+      renderAll();
+    } catch (e) {
+      alert('Não foi possível importar este arquivo: ' + e.message);
+    }
+  };
+  reader.readAsText(file);
+  ev.target.value = '';
+}
+
+// ---------- Render ----------
+
+function renderSummary() {
+  const mesAtual = currentMonth();
+  const totalAtivo = state.contratos
+    .filter(c => contratoAtivoNoMes(c, mesAtual))
+    .reduce((s, c) => s + Number(c.valorMensal), 0);
+
+  let faixaFixa = state.settings.salarioBase;
+  let faixaLabel = 'Base (abaixo de R$ 40.000 ativos)';
+  if (totalAtivo >= 80000) { faixaFixa = 9000; faixaLabel = 'Gatilho R$ 80.000 atingido'; }
+  else if (totalAtivo >= 40000) { faixaFixa = 7000; faixaLabel = 'Gatilho R$ 40.000 atingido'; }
+
+  let comissaoPrevistaMes = 0, comissaoPagaMes = 0;
+  state.contratos.forEach(c => {
+    const { taxa } = taxaAtual(c);
+    c.installments.forEach(inst => {
+      if (inst.mes === mesAtual) {
+        if (inst.pago) comissaoPagaMes += inst.comissaoPaga;
+        else comissaoPrevistaMes += inst.valor * taxa;
+      }
+    });
+  });
+
+  const cards = [
+    {
+      label: 'Contratos ativos (mês atual)',
+      value: fmtBRL(totalAtivo),
+      hint: state.contratos.filter(c => contratoAtivoNoMes(c, mesAtual)).length + ' contrato(s) ativo(s)'
+    },
+    {
+      label: 'Remuneração fixa atual',
+      value: fmtBRL(faixaFixa),
+      hint: faixaLabel,
+      active: faixaFixa !== state.settings.salarioBase
+    },
+    {
+      label: 'Comissão pendente (' + fmtMonth(mesAtual) + ')',
+      value: fmtBRL(comissaoPrevistaMes),
+      hint: 'ainda não baixada'
+    },
+    {
+      label: 'Comissão já paga (' + fmtMonth(mesAtual) + ')',
+      value: fmtBRL(comissaoPagaMes),
+      hint: 'confirmada este mês'
+    }
+  ];
+
+  document.getElementById('summaryCards').innerHTML = cards.map(c => `
+    <div class="card ${c.active ? 'tier-active' : ''}">
+      <div class="label">${c.label}</div>
+      <div class="value">${c.value}</div>
+      <div class="hint">${c.hint}</div>
+    </div>
+  `).join('');
+}
+
+function renderBonusAlerts() {
+  const meses = [...new Set(state.contratos.map(c => c.mesAssinatura))].sort();
+  const bonusMeses = meses.filter(m => bonusAtingido(m));
+  const el = document.getElementById('bonusAlerts');
+  if (bonusMeses.length === 0) { el.innerHTML = ''; return; }
+  el.innerHTML = bonusMeses.map(m => `
+    <div class="alert">
+      <span class="icon">🏆</span>
+      <span><strong>Meta desafio atingida em ${fmtMonth(m)}</strong> (total assinado: ${fmtBRL(cohortTotal(m))} ≥ meta de ${fmtBRL(state.settings.metaDesafio)}).
+      Comissão dobrada automaticamente para todos os contratos assinados neste mês, durante os 6 primeiros meses de cada um.</span>
+    </div>
+  `).join('');
+}
+
+function renderConfig() {
+  document.getElementById('cfgMeta').value = state.settings.metaDesafio;
+  document.getElementById('cfgBase').value = state.settings.salarioBase;
+}
+
+function renderContracts() {
+  const tbody = document.getElementById('contractsBody');
+  const empty = document.getElementById('contractsEmpty');
+  if (state.contratos.length === 0) {
+    tbody.innerHTML = '';
+    empty.style.display = 'block';
+    return;
+  }
+  empty.style.display = 'none';
+
+  const sorted = [...state.contratos].sort((a, b) => b.mesAssinatura.localeCompare(a.mesAssinatura));
+
+  tbody.innerHTML = sorted.map(c => {
+    const { taxa, cat, bonus } = taxaAtual(c);
+    const previsto = c.installments.reduce((s, i) => s + (i.pago ? i.comissaoPaga : i.valor * taxa), 0);
+    const pago = c.installments.reduce((s, i) => s + (i.pago ? i.comissaoPaga : 0), 0);
+    const rowId = 'inst_' + c.id;
+    return `
+      <tr class="contract-row">
+        <td><button class="link" onclick="toggleInstallments('${rowId}')">▾</button></td>
+        <td>${escapeHtml(c.cliente)}</td>
+        <td>${fmtBRL(c.valorMensal)}</td>
+        <td>${c.duracaoMeses} meses</td>
+        <td>
+          <span class="badge ${cat.key}">${cat.label} · ${(taxa * 100).toFixed(1).replace('.0','')}%</span>
+          ${bonus ? '<span class="badge bonus">🏆 bônus 2x</span>' : ''}
+        </td>
+        <td>${fmtMonth(c.mesAssinatura)}</td>
+        <td>${fmtBRL(previsto)}</td>
+        <td>${fmtBRL(pago)}</td>
+        <td class="row-actions"><button class="danger small" onclick="deleteContract('${c.id}')">Excluir</button></td>
+      </tr>
+      <tr class="installments-row" id="${rowId}" style="display:none;">
+        <td colspan="9">
+          <div class="installments-inner">
+            <table>
+              <thead>
+                <tr><th>Mês</th><th>Valor do mês (editável)</th><th>Comissão (${(taxa*100).toFixed(1).replace('.0','')}%)</th><th>Status</th><th>Pago em</th><th>Baixa</th></tr>
+              </thead>
+              <tbody>
+                ${c.installments.map((inst, idx) => `
+                  <tr>
+                    <td>${fmtMonth(inst.mes)}</td>
+                    <td>
+                      <input type="number" step="0.01" min="0" value="${inst.valor}" ${inst.pago ? 'disabled' : ''}
+                        style="max-width:130px"
+                        onchange="updateInstallmentValue('${c.id}', ${idx}, this.value)">
+                    </td>
+                    <td>${fmtBRL(inst.pago ? inst.comissaoPaga : inst.valor * taxa)}</td>
+                    <td><span class="badge ${inst.pago ? 'paid' : 'pending'}">${inst.pago ? 'Pago' : 'Pendente'}</span></td>
+                    <td>${inst.dataPagamento ? new Date(inst.dataPagamento + 'T00:00:00').toLocaleDateString('pt-BR') : '-'}</td>
+                    <td>
+                      <label class="paid-check">
+                        <input type="checkbox" ${inst.pago ? 'checked' : ''}
+                          onchange="toggleInstallmentPaid('${c.id}', ${idx}, this.checked)">
+                        dar baixa
+                      </label>
+                    </td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+          </div>
+        </td>
+      </tr>
+    `;
+  }).join('');
+}
+
+function toggleInstallments(rowId) {
+  const row = document.getElementById(rowId);
+  row.style.display = row.style.display === 'none' ? 'table-row' : 'none';
+}
+
+function renderMonthly() {
+  const mesInput = document.getElementById('monthFilter');
+  if (!mesInput.value) mesInput.value = currentMonth();
+  const mes = mesInput.value;
+
+  const rows = [];
+  state.contratos.forEach(c => {
+    const { taxa, cat, bonus } = taxaAtual(c);
+    c.installments.forEach((inst, idx) => {
+      if (inst.mes === mes) {
+        rows.push({ c, inst, idx, taxa, cat, bonus });
+      }
+    });
+  });
+
+  const tbody = document.getElementById('monthlyBody');
+  const empty = document.getElementById('monthlyEmpty');
+  const totalEl = document.getElementById('monthlyTotal');
+
+  if (rows.length === 0) {
+    tbody.innerHTML = '';
+    empty.style.display = 'block';
+    totalEl.textContent = '';
+    return;
+  }
+  empty.style.display = 'none';
+
+  let totalPrevisto = 0, totalPago = 0;
+  tbody.innerHTML = rows.map(r => {
+    const comissao = r.inst.pago ? r.inst.comissaoPaga : r.inst.valor * r.taxa;
+    if (r.inst.pago) totalPago += comissao; else totalPrevisto += comissao;
+    return `
+      <tr>
+        <td>${escapeHtml(r.c.cliente)}</td>
+        <td><span class="badge ${r.cat.key}">${r.cat.label}</span> ${r.bonus ? '<span class="badge bonus">🏆</span>' : ''}</td>
+        <td>${fmtBRL(r.inst.valor)}</td>
+        <td>${fmtBRL(comissao)}</td>
+        <td><span class="badge ${r.inst.pago ? 'paid' : 'pending'}">${r.inst.pago ? 'Pago' : 'Pendente'}</span></td>
+        <td>
+          <label class="paid-check">
+            <input type="checkbox" ${r.inst.pago ? 'checked' : ''}
+              onchange="toggleInstallmentPaid('${r.c.id}', ${r.idx}, this.checked)">
+            ${r.inst.dataPagamento ? new Date(r.inst.dataPagamento + 'T00:00:00').toLocaleDateString('pt-BR') : 'dar baixa'}
+          </label>
+        </td>
+      </tr>
+    `;
+  }).join('');
+
+  totalEl.textContent = `Total pendente: ${fmtBRL(totalPrevisto)}  ·  Total já pago: ${fmtBRL(totalPago)}`;
+}
+
+function escapeHtml(str) {
+  const div = document.createElement('div');
+  div.textContent = str;
+  return div.innerHTML;
+}
+
+function renderAll() {
+  renderSummary();
+  renderBonusAlerts();
+  renderConfig();
+  renderContracts();
+  renderMonthly();
+}
+
+// init
+document.getElementById('monthFilter').value = currentMonth();
+document.getElementById('fMes').value = currentMonth();
+renderAll();
+</script>
+</body>
+</html>
