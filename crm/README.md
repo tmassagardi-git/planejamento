@@ -29,10 +29,23 @@ npm run preview
 - **Empresas** — cadastro (nome, CNPJ, segmento, contato, endereço, tags,
   observações), busca, e ficha detalhada com abas:
   - **Dados** — informações cadastrais
+  - **VIC** — avaliação de qualificação (ver abaixo)
   - **Contatos** — pessoas associadas à empresa (nome, cargo, telefone,
     WhatsApp, e-mail)
   - **Histórico de Doações** — todas as doações da empresa, cada uma
     expansível para ver as parcelas
+- **Mapa de relacionamento** — clicando no nome de um contato abre um mapa
+  visual com todas as suas conexões (familiares, amigos, colegas de
+  trabalho...) com qualquer outro contato do sistema, mesmo de outra
+  empresa. Ao adicionar uma conexão, o tipo pode ser diferente em cada
+  sentido (ex.: A é "Pai" de B, B é "Filho(a)" de A); tipos simétricos
+  (Amigos, Família...) usam o mesmo valor dos dois lados. Contatos da mesma
+  empresa entram automaticamente em conexão de "Colegas de trabalho"; ao
+  mudar um contato de empresa, essa conexão automática vira "Ex colega de
+  trabalho" (sem apagar o histórico) e novas conexões de "Colegas de
+  trabalho" são criadas com quem já está na empresa nova — a empresa
+  anterior fica registrada na ficha do contato. Conexões criadas/editadas
+  manualmente nunca são sobrescritas por essa lógica automática.
 - **Funil de Vendas** — etapas configuráveis (Configurações → Funil de
   vendas), visualização **Kanban** (drag and drop entre etapas) ou **Lista**.
   Cada oportunidade tem: empresa, contato, nome, proposta (o que foi
@@ -112,6 +125,7 @@ O modelo de dados (`src/lib/types.ts`) já foi desenhado pensando nisso:
 | `Catalog`        | pode virar tabelas `categories`, `strategies`, `payment_methods`, `loss_reasons` (ou permanecer 1 registro de config) | — |
 | `VicCriterion`   | `vic_criteria`                | eixo `V`/`I`/`C`, peso |
 | `VicEvaluation`  | `vic_evaluations`              | FK `company_id`; `notas`/`obs` → `jsonb` |
+| `ContactConnection` | `contact_connections`       | FK `contact_a_id`, `contact_b_id` (ambos para `contacts`) |
 
 Convenções usadas (facilitam o `CREATE TABLE` no Postgres):
 - `id`: `uuid` (gerado com `uuid` no cliente — pode continuar assim ou virar

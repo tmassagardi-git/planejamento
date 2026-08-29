@@ -1,7 +1,9 @@
 import { useState } from 'react';
+import { useLiveQuery } from 'dexie-react-hooks';
+import { db } from '../lib/db';
 import type { Contact } from '../lib/types';
 import { createContact, updateContact, type ContactInput } from '../services/contacts';
-import { Button, Field, Input } from './ui/Primitives';
+import { Button, Field, Input, Select } from './ui/Primitives';
 
 export function ContactForm({
   companyId,
@@ -14,6 +16,7 @@ export function ContactForm({
   onSaved: () => void;
   onCancel: () => void;
 }) {
+  const companies = useLiveQuery(() => db.companies.orderBy('name').toArray(), []);
   const [form, setForm] = useState<ContactInput>({
     companyId,
     name: contact?.name ?? '',
@@ -55,6 +58,22 @@ export function ContactForm({
           <Input value={form.role} onChange={(e) => set('role', e.target.value)} />
         </Field>
       </div>
+      {contact && (
+        <Field label="Empresa">
+          <Select value={form.companyId} onChange={(e) => set('companyId', e.target.value)}>
+            {companies?.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.name}
+              </option>
+            ))}
+          </Select>
+          {form.companyId !== contact.companyId && (
+            <p className="mt-1 text-xs text-amber-600">
+              As conexões de "Colegas de trabalho" com a empresa atual passarão para "Ex colega de trabalho".
+            </p>
+          )}
+        </Field>
+      )}
       <div className="grid grid-cols-2 gap-3">
         <Field label="Telefone">
           <Input value={form.phone} onChange={(e) => set('phone', e.target.value)} />

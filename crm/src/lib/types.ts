@@ -36,6 +36,7 @@ export interface Contact extends BaseEntity {
   email?: string;
   isPrimary?: boolean;
   notes?: string;
+  previousCompanyIds?: ID[]; // histórico de empresas anteriores (ao trocar de empresa)
 }
 
 export interface Funnel extends BaseEntity {
@@ -104,6 +105,21 @@ export interface Catalog extends BaseEntity {
   strategies: string[]; // estratégias de captação
   paymentMethods: string[]; // meios de pagamento
   lossReasons: string[]; // motivos de perda de oportunidade
+  relationshipTypes: string[]; // tipos de conexão do mapa de relacionamento
+}
+
+// --- Mapa de relacionamento entre contatos ---
+// Uma conexão liga dois contatos (de qualquer empresa) com um tipo de
+// relação. O tipo pode ser diferente em cada sentido (ex.: A é "Pai" de B,
+// B é "Filho(a)" de A) — para relações simétricas (Amigos, Família,
+// Colegas de trabalho) os dois lados usam o mesmo tipo.
+export interface ContactConnection extends BaseEntity {
+  contactAId: ID;
+  contactBId: ID;
+  tipoAB: string; // tipo de A em relação a B
+  tipoBA: string; // tipo de B em relação a A
+  auto?: boolean; // criada automaticamente por estarem/terem estado na mesma empresa
+  notes?: string;
 }
 
 // --- Sistema VIC (Vínculo, Interesse, Capacidade) ---

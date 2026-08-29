@@ -10,7 +10,7 @@ export function CatalogListEditor({
   items,
 }: {
   title: string;
-  field: keyof Pick<Catalog, 'categories' | 'strategies' | 'paymentMethods' | 'lossReasons'>;
+  field: keyof Pick<Catalog, 'categories' | 'strategies' | 'paymentMethods' | 'lossReasons' | 'relationshipTypes'>;
   items: string[];
 }) {
   const [draft, setDraft] = useState('');

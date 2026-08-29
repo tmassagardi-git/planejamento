@@ -102,6 +102,11 @@ export function SettingsPage() {
             <CatalogListEditor title="Estratégias de captação" field="strategies" items={catalog.strategies} />
             <CatalogListEditor title="Meios de pagamento" field="paymentMethods" items={catalog.paymentMethods} />
             <CatalogListEditor title="Motivos de perda" field="lossReasons" items={catalog.lossReasons} />
+            <CatalogListEditor
+              title="Tipos de conexão (mapa de relacionamento)"
+              field="relationshipTypes"
+              items={catalog.relationshipTypes}
+            />
           </>
         )}
 

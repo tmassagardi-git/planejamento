@@ -8,7 +8,7 @@ export async function getCatalog(): Promise<Catalog> {
 }
 
 export async function updateCatalog(
-  patch: Partial<Pick<Catalog, 'categories' | 'strategies' | 'paymentMethods' | 'lossReasons'>>,
+  patch: Partial<Pick<Catalog, 'categories' | 'strategies' | 'paymentMethods' | 'lossReasons' | 'relationshipTypes'>>,
 ): Promise<void> {
   const catalog = await getCatalog();
   await db.catalog.update(catalog.id, { ...patch, updatedAt: new Date().toISOString() });

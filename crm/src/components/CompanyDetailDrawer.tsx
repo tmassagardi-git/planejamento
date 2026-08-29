@@ -9,10 +9,24 @@ import { CompanyForm } from './CompanyForm';
 import { ContactForm } from './ContactForm';
 import { DonationCard } from './DonationCard';
 import { CompanyVicTab } from './vic/CompanyVicTab';
+import { NetworkMapModal } from './connections/NetworkMapModal';
 import { deleteContact } from '../services/contacts';
+import { getConnectionsForContact } from '../services/connections';
 import { formatCurrency } from '../lib/format';
 import type { Contact } from '../lib/types';
-import { Pencil, Phone, Plus, Trash2 } from 'lucide-react';
+import { Network, Pencil, Phone, Plus, Trash2 } from 'lucide-react';
+
+function ContactConnectionsBadge({ contactId, onClick }: { contactId: string; onClick: () => void }) {
+  const connections = useLiveQuery(() => getConnectionsForContact(contactId), [contactId]);
+  return (
+    <button
+      onClick={onClick}
+      className="flex items-center gap-1 rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-500 hover:bg-indigo-50 hover:text-indigo-600"
+    >
+      <Network size={12} /> {connections?.length ?? 0} conexões
+    </button>
+  );
+}
 
 export function CompanyDetailDrawer({
   companyId,
@@ -30,9 +44,12 @@ export function CompanyDetailDrawer({
   const [addingContact, setAddingContact] = useState(false);
   const [editingContact, setEditingContact] = useState<Contact | null>(null);
   const [deletingContact, setDeletingContact] = useState<Contact | null>(null);
+  const [mapContactId, setMapContactId] = useState<string | null>(null);
 
   const company = useLiveQuery(() => db.companies.get(companyId), [companyId]);
   const contacts = useLiveQuery(() => db.contacts.where('companyId').equals(companyId).toArray(), [companyId]);
+  const allCompanies = useLiveQuery(() => db.companies.toArray(), []);
+  const companyById = new Map((allCompanies ?? []).map((c) => [c.id, c.name]));
   const donations = useLiveQuery(
     () => db.donations.where('companyId').equals(companyId).reverse().sortBy('startDate'),
     [companyId],
@@ -122,10 +139,18 @@ export function CompanyDetailDrawer({
               <div key={contact.id} className="flex items-start justify-between rounded-lg border border-slate-200 p-3">
                 <div>
                   <div className="flex items-center gap-2 font-medium text-slate-900">
-                    {contact.name}
+                    <button onClick={() => setMapContactId(contact.id)} className="hover:text-indigo-600 hover:underline">
+                      {contact.name}
+                    </button>
                     {contact.isPrimary && <Badge color="indigo">Principal</Badge>}
                   </div>
                   {contact.role && <div className="text-xs text-slate-500">{contact.role}</div>}
+                  {contact.previousCompanyIds && contact.previousCompanyIds.length > 0 && (
+                    <div className="text-xs text-amber-600">
+                      Empresa(s) anterior(es):{' '}
+                      {contact.previousCompanyIds.map((id) => companyById.get(id) ?? '—').join(', ')}
+                    </div>
+                  )}
                   <div className="mt-1 flex flex-wrap gap-3 text-xs text-slate-500">
                     {contact.phone && (
                       <span className="flex items-center gap-1">
@@ -135,16 +160,21 @@ export function CompanyDetailDrawer({
                     {contact.whatsapp && <span>WhatsApp: {contact.whatsapp}</span>}
                     {contact.email && <span>{contact.email}</span>}
                   </div>
+                  <div className="mt-1.5">
+                    <ContactConnectionsBadge contactId={contact.id} onClick={() => setMapContactId(contact.id)} />
+                  </div>
                 </div>
                 <div className="flex shrink-0 gap-1">
                   <button
                     onClick={() => setEditingContact(contact)}
+                    aria-label={`Editar ${contact.name}`}
                     className="rounded p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600"
                   >
                     <Pencil size={14} />
                   </button>
                   <button
                     onClick={() => setDeletingContact(contact)}
+                    aria-label={`Excluir ${contact.name}`}
                     className="rounded p-1.5 text-slate-400 hover:bg-red-50 hover:text-red-600"
                   >
                     <Trash2 size={14} />
@@ -204,6 +234,8 @@ export function CompanyDetailDrawer({
         message={`Remover "${deletingContact?.name}" desta empresa?`}
         confirmLabel="Excluir"
       />
+
+      {mapContactId && <NetworkMapModal contactId={mapContactId} onClose={() => setMapContactId(null)} />}
     </Drawer>
   );
 }

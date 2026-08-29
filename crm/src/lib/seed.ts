@@ -39,6 +39,18 @@ export async function ensureSeeded() {
     );
   }
 
+  const RELATIONSHIP_TYPES_SEED = [
+    'Família',
+    'Cônjuge',
+    'Pai',
+    'Mãe',
+    'Filho(a)',
+    'Amigos',
+    'Colegas de trabalho',
+    'Ex colega de trabalho',
+    'Outro',
+  ];
+
   const catalogCount = await db.catalog.count();
   if (catalogCount === 0) {
     const now = new Date().toISOString();
@@ -48,9 +60,16 @@ export async function ensureSeeded() {
       strategies: ['Empresa Amiga', 'Corrida'],
       paymentMethods: ['Pix', 'Boleto', 'Transferência', 'Cartão de crédito', 'Em serviço / Produto', 'Cesta Básica'],
       lossReasons: ['Sem orçamento', 'Sem retorno', 'Optou por outra instituição', 'Fora do perfil', 'Outro'],
+      relationshipTypes: RELATIONSHIP_TYPES_SEED,
       createdAt: now,
       updatedAt: now,
     });
+  } else {
+    // migração: bancos criados antes do mapa de relacionamento não têm essa lista ainda
+    const catalog = await db.catalog.toCollection().first();
+    if (catalog && !catalog.relationshipTypes) {
+      await db.catalog.update(catalog.id, { relationshipTypes: RELATIONSHIP_TYPES_SEED });
+    }
   }
 
   // Importa, uma única vez, os 16 critérios padrão do Sistema VIC e as 68
