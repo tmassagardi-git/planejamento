@@ -426,6 +426,29 @@
     color: var(--ink);
   }
 
+  .modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(10, 15, 13, 0.45);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    z-index: 100;
+  }
+  .modal-overlay[hidden] { display: none; }
+  .modal-box {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 22px 24px;
+    max-width: 400px;
+    width: 100%;
+  }
+  .modal-box p { margin: 0 0 18px; font-size: 14px; line-height: 1.5; color: var(--ink); }
+  .modal-actions { display: flex; justify-content: flex-end; gap: 8px; }
+
   ::placeholder { color: var(--muted); opacity: 0.6; }
 
   @media (prefers-reduced-motion: reduce) {
@@ -638,6 +661,16 @@
   <p class="footer-note">Anexo I – Comissionamentos, Bônus e Gatilhos de Remuneração &middot; cálculo automático</p>
 </div>
 
+<div class="modal-overlay" id="modalOverlay" hidden>
+  <div class="modal-box" role="alertdialog" aria-modal="true" aria-labelledby="modalMessage">
+    <p id="modalMessage"></p>
+    <div class="modal-actions">
+      <button class="secondary small" id="modalCancelBtn" type="button">Cancelar</button>
+      <button class="danger small" id="modalConfirmBtn" type="button">Confirmar</button>
+    </div>
+  </div>
+</div>
+
 <script>
 const STORAGE_KEY = 'cassia_comissoes_v1';
 
@@ -813,11 +846,96 @@ function updateObservacoes(contractId, value) {
   saveState();
 }
 
-function deleteContract(id) {
-  if (!confirm('Remover este contrato e todo o histórico de comissões dele?')) return;
-  state.contratos = state.contratos.filter(c => c.id !== id);
+// Muda o mês de assinatura e realinha as parcelas (que são geradas por
+// posição a partir da assinatura), sem perder valores/pagamentos já lançados.
+function updateMesAssinatura(contractId, newValue) {
+  const c = state.contratos.find(x => x.id === contractId);
+  if (!c || !newValue) return;
+  c.mesAssinatura = newValue;
+  c.installments.forEach((inst, idx) => {
+    inst.mes = addMonths(newValue, idx);
+  });
   saveState();
   renderAll();
+}
+
+function updateDataPagamento(contractId, idx, newValue) {
+  const c = state.contratos.find(x => x.id === contractId);
+  if (!c) return;
+  const inst = c.installments[idx];
+  if (!inst.pago) return;
+  inst.dataPagamento = newValue || null;
+  saveState();
+  renderAll();
+}
+
+// Modal próprio em vez de confirm()/alert() nativos do navegador: dentro do
+// Artifact essas caixas de diálogo do navegador ficam bloqueadas e retornam
+// como se o usuário tivesse cancelado, fazendo a exclusão parecer não fazer nada.
+function showConfirm(message, onConfirm) {
+  const overlay = document.getElementById('modalOverlay');
+  const msgEl = document.getElementById('modalMessage');
+  const cancelBtn = document.getElementById('modalCancelBtn');
+  const confirmBtn = document.getElementById('modalConfirmBtn');
+  msgEl.textContent = message;
+  cancelBtn.hidden = false;
+  confirmBtn.textContent = 'Confirmar';
+  overlay.hidden = false;
+  confirmBtn.focus();
+
+  function cleanup() {
+    overlay.hidden = true;
+    confirmBtn.removeEventListener('click', onConfirmClick);
+    cancelBtn.removeEventListener('click', onCancelClick);
+    overlay.removeEventListener('click', onOverlayClick);
+    document.removeEventListener('keydown', onKeydown);
+  }
+  function onConfirmClick() { cleanup(); onConfirm(); }
+  function onCancelClick() { cleanup(); }
+  function onOverlayClick(e) { if (e.target === overlay) cleanup(); }
+  function onKeydown(e) { if (e.key === 'Escape') cleanup(); }
+
+  confirmBtn.addEventListener('click', onConfirmClick);
+  cancelBtn.addEventListener('click', onCancelClick);
+  overlay.addEventListener('click', onOverlayClick);
+  document.addEventListener('keydown', onKeydown);
+}
+
+function showAlert(message) {
+  const overlay = document.getElementById('modalOverlay');
+  const msgEl = document.getElementById('modalMessage');
+  const cancelBtn = document.getElementById('modalCancelBtn');
+  const confirmBtn = document.getElementById('modalConfirmBtn');
+  msgEl.textContent = message;
+  cancelBtn.hidden = true;
+  confirmBtn.textContent = 'OK';
+  overlay.hidden = false;
+  confirmBtn.focus();
+
+  function cleanup() {
+    overlay.hidden = true;
+    cancelBtn.hidden = false;
+    confirmBtn.textContent = 'Confirmar';
+    confirmBtn.removeEventListener('click', onOk);
+    overlay.removeEventListener('click', onOverlayClick);
+    document.removeEventListener('keydown', onKeydown);
+  }
+  function onOk() { cleanup(); }
+  function onOverlayClick(e) { if (e.target === overlay) cleanup(); }
+  function onKeydown(e) { if (e.key === 'Escape') cleanup(); }
+
+  confirmBtn.addEventListener('click', onOk);
+  overlay.addEventListener('click', onOverlayClick);
+  document.addEventListener('keydown', onKeydown);
+}
+
+function deleteContract(id) {
+  showConfirm('Remover este contrato e todo o histórico de comissões dele?', () => {
+    state.contratos = state.contratos.filter(c => c.id !== id);
+    expandedContracts.delete(id);
+    saveState();
+    renderAll();
+  });
 }
 
 function updateInstallmentValue(contractId, idx, newValue) {
@@ -939,12 +1057,13 @@ function importData(ev) {
     try {
       const parsed = JSON.parse(reader.result);
       if (!parsed.contratos || !parsed.settings) throw new Error('Formato inválido');
-      if (!confirm('Isso vai substituir todos os dados atuais pelos dados do arquivo. Continuar?')) return;
-      state = parsed;
-      saveState();
-      renderAll();
+      showConfirm('Isso vai substituir todos os dados atuais pelos dados do arquivo. Continuar?', () => {
+        state = parsed;
+        saveState();
+        renderAll();
+      });
     } catch (e) {
-      alert('Não foi possível importar este arquivo: ' + e.message);
+      showAlert('Não foi possível importar este arquivo: ' + e.message);
     }
   };
   reader.readAsText(file);
@@ -1055,7 +1174,7 @@ function renderContracts() {
           <span class="badge ${cat.key}">${cat.label} · ${(taxa * 100).toFixed(1).replace('.0','')}%</span>
           ${bonus ? '<span class="badge bonus">🏆 bônus 2x</span>' : ''}
         </td>
-        <td>${fmtMonth(c.mesAssinatura)}</td>
+        <td><input type="month" value="${c.mesAssinatura}" style="min-width:150px" onchange="updateMesAssinatura('${c.id}', this.value)"></td>
         <td class="money">${fmtBRL(previsto)}</td>
         <td class="money">${fmtBRL(pago)}</td>
         <td class="money">${fmtBRL(receitaTotal)}</td>
@@ -1087,7 +1206,9 @@ function renderContracts() {
                     <td>${inst.comissionavel
                       ? `<span class="badge ${inst.pago ? 'paid' : 'pending'}">${inst.pago ? 'Pago' : 'Pendente'}</span>`
                       : '<span class="badge inactive">Fora da comissão</span>'}</td>
-                    <td>${inst.dataPagamento ? new Date(inst.dataPagamento + 'T00:00:00').toLocaleDateString('pt-BR') : '-'}</td>
+                    <td>${inst.comissionavel && inst.pago
+                      ? `<input type="date" value="${inst.dataPagamento}" style="max-width:150px" onchange="updateDataPagamento('${c.id}', ${idx}, this.value)">`
+                      : (inst.comissionavel ? '-' : '')}</td>
                     <td>
                       ${inst.comissionavel ? `
                         <label class="paid-check">
