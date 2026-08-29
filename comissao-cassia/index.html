@@ -737,12 +737,29 @@ function toggleInstallmentPaidSilent(c, idx, checked) {
   }
 }
 
-function exportData() {
-  const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
+async function exportData() {
+  const json = JSON.stringify(state, null, 2);
+  const filename = 'backup-comissoes-cassia-' + currentMonth() + '.json';
+
+  if (window.claude && typeof window.claude.use === 'function') {
+    try {
+      const downloads = await window.claude.use('downloads');
+      if (downloads) {
+        await downloads.save({ filename, data: json });
+        return;
+      }
+    } catch (e) {
+      if (e && e.code === 'declined') return;
+      console.error('Falha ao exportar via downloads do Claude, tentando modo padrão.', e);
+    }
+  }
+
+  // Modo padrão (arquivo aberto direto do disco, fora do Artifact)
+  const blob = new Blob([json], { type: 'application/json' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = 'backup-comissoes-cassia-' + currentMonth() + '.json';
+  a.download = filename;
   document.body.appendChild(a);
   a.click();
   a.remove();
