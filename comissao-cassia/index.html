@@ -3,170 +3,383 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Controle de Comissão — Cassia</title>
+<title>Comissão Cassia</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,500;8..60,600;8..60,700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
   :root {
-    --bg: #f4f6f9;
-    --card: #ffffff;
-    --border: #e2e6ec;
-    --text: #1f2733;
-    --muted: #6b7684;
-    --primary: #2f6fed;
-    --primary-dark: #1f4fc4;
-    --green: #1a9c5c;
-    --green-bg: #e7f8ef;
-    --orange: #c8730a;
-    --orange-bg: #fdf1de;
-    --red: #d0342c;
-    --red-bg: #fce9e8;
-    --gold-bg: #fff6d8;
-    --gold-border: #e8c547;
-    --radius: 10px;
+    --bg: #f2f6f4;
+    --surface: #ffffff;
+    --surface-2: #eaf1ee;
+    --ink: #16231f;
+    --muted: #5c6b66;
+    --border: #dde5e1;
+    --border-soft: #e8eeec;
+
+    --primary: #0e6b57;
+    --primary-strong: #094f40;
+    --primary-soft: #e1f1ec;
+
+    --gold: #96700f;
+    --gold-strong: #7a5a0c;
+    --gold-soft: #faf0d8;
+    --gold-border: #dfc077;
+
+    --good: #1f8f5b;
+    --good-soft: #e4f6ed;
+    --warn: #ad6a10;
+    --warn-soft: #fbeedb;
+    --bad: #bd382f;
+    --bad-soft: #fbe8e6;
+
+    --cat1: #2c58bf;
+    --cat1-soft: #e6edfb;
+    --cat2: #6a3cc0;
+    --cat2-soft: #eee5fb;
+    --cat3: #ad560d;
+    --cat3-soft: #fbead6;
+
+    --shadow: 0 1px 2px rgba(20, 30, 27, 0.04), 0 6px 20px -12px rgba(20, 30, 27, 0.12);
+    --radius: 12px;
+    --radius-sm: 8px;
+
+    --font-display: "Source Serif 4", Georgia, "Times New Roman", serif;
+    --font-body: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --font-mono: "JetBrains Mono", "SF Mono", Consolas, "Liberation Mono", monospace;
+
+    color-scheme: light;
   }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #101613;
+      --surface: #171f1b;
+      --surface-2: #1d2622;
+      --ink: #e9f2ee;
+      --muted: #93a49d;
+      --border: #2a3632;
+      --border-soft: #212b27;
+
+      --primary: #3fc7a2;
+      --primary-strong: #6fdcbc;
+      --primary-soft: #143b32;
+
+      --gold: #e2bb52;
+      --gold-strong: #f0cd76;
+      --gold-soft: #3a2f10;
+      --gold-border: #6a5320;
+
+      --good: #43cd8f;
+      --good-soft: #123526;
+      --warn: #e2a63f;
+      --warn-soft: #3a2b10;
+      --bad: #e46b62;
+      --bad-soft: #3a1a17;
+
+      --cat1: #85a7ff;
+      --cat1-soft: #182140;
+      --cat2: #bd9af5;
+      --cat2-soft: #241a3c;
+      --cat3: #f0a565;
+      --cat3-soft: #3a2410;
+
+      --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 8px 24px -14px rgba(0, 0, 0, 0.55);
+      color-scheme: dark;
+    }
+  }
+
+  :root[data-theme="dark"] {
+    --bg: #101613;
+    --surface: #171f1b;
+    --surface-2: #1d2622;
+    --ink: #e9f2ee;
+    --muted: #93a49d;
+    --border: #2a3632;
+    --border-soft: #212b27;
+
+    --primary: #3fc7a2;
+    --primary-strong: #6fdcbc;
+    --primary-soft: #143b32;
+
+    --gold: #e2bb52;
+    --gold-strong: #f0cd76;
+    --gold-soft: #3a2f10;
+    --gold-border: #6a5320;
+
+    --good: #43cd8f;
+    --good-soft: #123526;
+    --warn: #e2a63f;
+    --warn-soft: #3a2b10;
+    --bad: #e46b62;
+    --bad-soft: #3a1a17;
+
+    --cat1: #85a7ff;
+    --cat1-soft: #182140;
+    --cat2: #bd9af5;
+    --cat2-soft: #241a3c;
+    --cat3: #f0a565;
+    --cat3-soft: #3a2410;
+
+    --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 8px 24px -14px rgba(0, 0, 0, 0.55);
+    color-scheme: dark;
+  }
+
   * { box-sizing: border-box; }
+
   body {
     margin: 0;
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    font-family: var(--font-body);
     background: var(--bg);
-    color: var(--text);
-    padding: 24px;
-    line-height: 1.4;
+    color: var(--ink);
+    padding: 32px 24px 60px;
+    line-height: 1.45;
+    -webkit-font-smoothing: antialiased;
   }
-  h1 { font-size: 22px; margin: 0 0 4px; }
-  h2 { font-size: 16px; margin: 0 0 12px; }
-  .subtitle { color: var(--muted); font-size: 13px; margin: 0 0 20px; }
+
   .wrap { max-width: 1180px; margin: 0 auto; }
+
+  header.page-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    gap: 16px;
+    flex-wrap: wrap;
+    margin-bottom: 26px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid var(--border);
+  }
+  header.page-head .eyebrow {
+    font-size: 11.5px;
+    font-weight: 600;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+    color: var(--primary);
+    margin: 0 0 6px;
+  }
+  h1 {
+    font-family: var(--font-display);
+    font-weight: 600;
+    font-size: 30px;
+    margin: 0;
+    letter-spacing: -0.01em;
+    text-wrap: balance;
+  }
+  .subtitle { color: var(--muted); font-size: 13.5px; margin: 6px 0 0; max-width: 62ch; }
+  h2 {
+    font-family: var(--font-display);
+    font-weight: 600;
+    font-size: 17px;
+    margin: 0;
+    letter-spacing: -0.005em;
+  }
 
   .cards {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
     gap: 14px;
     margin-bottom: 22px;
   }
   .card {
-    background: var(--card);
+    background: var(--surface);
     border: 1px solid var(--border);
     border-radius: var(--radius);
-    padding: 16px 18px;
+    padding: 17px 19px;
+    box-shadow: var(--shadow);
   }
-  .card .label { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: .03em; }
-  .card .value { font-size: 24px; font-weight: 700; margin-top: 6px; }
-  .card .hint { font-size: 12px; color: var(--muted); margin-top: 4px; }
-  .card.tier-active { border-color: var(--green); background: var(--green-bg); }
+  .card .label { font-size: 11.5px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; font-weight: 600; }
+  .card .value {
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+    font-size: 25px;
+    font-weight: 600;
+    margin-top: 8px;
+    letter-spacing: -0.01em;
+  }
+  .card .hint { font-size: 12px; color: var(--muted); margin-top: 5px; }
+  .card.tier-active {
+    border-color: var(--gold-border);
+    background: linear-gradient(180deg, var(--gold-soft), var(--surface) 65%);
+  }
+  .card.tier-active .value { color: var(--gold-strong); }
 
   .panel {
-    background: var(--card);
+    background: var(--surface);
     border: 1px solid var(--border);
     border-radius: var(--radius);
-    padding: 18px 20px;
-    margin-bottom: 20px;
+    padding: 20px 22px;
+    margin-bottom: 18px;
+    box-shadow: var(--shadow);
   }
   .panel-head {
     display: flex;
     justify-content: space-between;
     align-items: center;
     cursor: pointer;
+    user-select: none;
   }
-  .panel-head h2 { margin: 0; }
-  .panel-body { margin-top: 14px; }
-  .chevron { transition: transform .15s; color: var(--muted); font-size: 13px; }
+  .panel-body { margin-top: 16px; }
+  .chevron { transition: transform 0.15s ease; color: var(--muted); font-size: 12px; }
   .collapsed .chevron { transform: rotate(-90deg); }
   .collapsed .panel-body { display: none; }
+
+  .config-note {
+    color: var(--muted);
+    font-size: 12.5px;
+    line-height: 1.6;
+    background: var(--surface-2);
+    border: 1px solid var(--border-soft);
+    border-radius: var(--radius-sm);
+    padding: 12px 14px;
+    margin-top: 4px;
+    grid-column: 1 / -1;
+  }
 
   form.grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-    gap: 12px;
+    gap: 13px;
     align-items: end;
   }
-  label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 4px; }
+  label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 5px; font-weight: 500; }
   input, select {
     width: 100%;
-    padding: 8px 10px;
+    padding: 9px 11px;
     border: 1px solid var(--border);
-    border-radius: 6px;
+    border-radius: var(--radius-sm);
     font-size: 14px;
-    background: #fff;
-    color: var(--text);
+    font-family: var(--font-body);
+    background: var(--surface);
+    color: var(--ink);
   }
-  input:focus, select:focus { outline: 2px solid var(--primary); outline-offset: -1px; }
-  input[disabled] { background: #f1f2f5; color: var(--muted); }
+  input[type="number"], input[type="month"], input[type="date"] {
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+  }
+  input:focus, select:focus { outline: 2px solid var(--primary); outline-offset: 1px; }
+  input[disabled] { background: var(--surface-2); color: var(--muted); }
 
   button {
     cursor: pointer;
     border: none;
-    border-radius: 6px;
-    padding: 9px 16px;
-    font-size: 14px;
+    border-radius: var(--radius-sm);
+    padding: 9px 17px;
+    font-size: 13.5px;
     font-weight: 600;
+    font-family: var(--font-body);
     background: var(--primary);
-    color: #fff;
+    color: #ffffff;
+    transition: background 0.12s ease, transform 0.05s ease;
   }
-  button:hover { background: var(--primary-dark); }
-  button.secondary { background: #eef1f6; color: var(--text); }
-  button.secondary:hover { background: #dfe4ec; }
-  button.danger { background: var(--red-bg); color: var(--red); }
-  button.danger:hover { background: #f6d3d1; }
-  button.small { padding: 5px 10px; font-size: 12px; }
-  button.link { background: none; color: var(--primary); padding: 2px 4px; font-weight: 600; }
-  button.link:hover { background: none; text-decoration: underline; }
+  button:hover { background: var(--primary-strong); }
+  button:active { transform: translateY(1px); }
+  button:focus-visible { outline: 2px solid var(--primary-strong); outline-offset: 2px; }
+  button.secondary { background: var(--surface-2); color: var(--ink); border: 1px solid var(--border); }
+  button.secondary:hover { background: var(--border-soft); }
+  button.danger { background: var(--bad-soft); color: var(--bad); }
+  button.danger:hover { background: var(--bad); color: #fff; }
+  button.small { padding: 6px 11px; font-size: 12px; }
+  button.link { background: none; color: var(--primary); padding: 2px 6px; font-weight: 700; font-size: 15px; }
+  button.link:hover { background: var(--primary-soft); }
 
   table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
-  th, td { text-align: left; padding: 9px 10px; border-bottom: 1px solid var(--border); }
-  th { color: var(--muted); font-weight: 600; font-size: 12px; text-transform: uppercase; letter-spacing: .02em; }
-  tr.contract-row:hover { background: #fafbfd; }
-  tr.installments-row td { padding: 0; background: #fbfcfe; }
-  .installments-inner { padding: 10px 14px 16px 34px; }
+  th, td { text-align: left; padding: 10px 11px; border-bottom: 1px solid var(--border-soft); }
+  td { font-variant-numeric: tabular-nums; }
+  th {
+    color: var(--muted);
+    font-weight: 600;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+  tr.contract-row:hover { background: var(--surface-2); }
+  tr.installments-row td { padding: 0; background: var(--bg); }
+  .installments-inner { padding: 12px 16px 18px 36px; }
+  .table-scroll { overflow-x: auto; }
+
+  .money { font-family: var(--font-mono); }
 
   .badge {
     display: inline-block;
-    padding: 2px 9px;
+    padding: 3px 10px;
     border-radius: 20px;
-    font-size: 11.5px;
+    font-size: 11px;
     font-weight: 700;
+    letter-spacing: 0.01em;
+    white-space: nowrap;
   }
-  .badge.cat1 { background: #e8f0fe; color: #1a56c4; }
-  .badge.cat2 { background: #eee3fb; color: #6c2bd9; }
-  .badge.cat3 { background: #fde9d7; color: #b5560a; }
-  .badge.bonus { background: var(--gold-bg); color: #8a6d00; border: 1px solid var(--gold-border); }
-  .badge.paid { background: var(--green-bg); color: var(--green); }
-  .badge.pending { background: var(--orange-bg); color: var(--orange); }
-  .badge.inactive { background: #eee; color: var(--muted); }
+  .badge.cat1 { background: var(--cat1-soft); color: var(--cat1); }
+  .badge.cat2 { background: var(--cat2-soft); color: var(--cat2); }
+  .badge.cat3 { background: var(--cat3-soft); color: var(--cat3); }
+  .badge.bonus { background: var(--gold-soft); color: var(--gold-strong); border: 1px solid var(--gold-border); }
+  .badge.paid { background: var(--good-soft); color: var(--good); }
+  .badge.pending { background: var(--warn-soft); color: var(--warn); }
+  .badge.inactive { background: var(--surface-2); color: var(--muted); }
 
   .row-actions { display: flex; gap: 6px; }
 
-  .empty { color: var(--muted); font-size: 13px; padding: 18px 4px; text-align: center; }
+  .empty {
+    color: var(--muted);
+    font-size: 13px;
+    padding: 26px 4px;
+    text-align: center;
+    border: 1px dashed var(--border);
+    border-radius: var(--radius-sm);
+    margin-top: 6px;
+  }
 
   .alert {
     display: flex;
     align-items: center;
-    gap: 10px;
-    background: var(--gold-bg);
+    gap: 12px;
+    background: var(--gold-soft);
     border: 1px solid var(--gold-border);
-    border-radius: 8px;
-    padding: 10px 14px;
+    border-radius: var(--radius-sm);
+    padding: 12px 16px;
     font-size: 13.5px;
     margin-bottom: 14px;
   }
-  .alert .icon { font-size: 16px; }
+  .alert .icon { font-size: 17px; flex-shrink: 0; }
+  .alert strong { color: var(--gold-strong); }
 
-  .toolbar { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 14px; }
+  .toolbar { display: flex; justify-content: space-between; align-items: flex-end; flex-wrap: wrap; gap: 10px; margin-bottom: 16px; }
   .toolbar-right { display: flex; gap: 8px; align-items: center; }
 
-  .month-input { width: 160px; }
+  .month-input { width: 170px; }
 
-  .footer-note { color: var(--muted); font-size: 12px; margin-top: 30px; text-align: center; }
+  .footer-note { color: var(--muted); font-size: 12px; margin-top: 34px; text-align: center; }
 
-  input[type="checkbox"] { width: auto; }
-  .paid-check { display: flex; align-items: center; gap: 6px; font-size: 13px; }
+  .paid-check { display: flex; align-items: center; gap: 7px; font-size: 13px; }
+  input[type="checkbox"] { width: auto; accent-color: var(--primary); }
 
-  ::placeholder { color: #b3bac5; }
+  .total-line {
+    margin-top: 12px;
+    font-size: 14px;
+    font-weight: 600;
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+    display: flex;
+    gap: 18px;
+    flex-wrap: wrap;
+  }
+  .total-line span.dim { color: var(--muted); font-weight: 500; font-family: var(--font-body); }
+
+  ::placeholder { color: var(--muted); opacity: 0.6; }
+
+  @media (prefers-reduced-motion: reduce) {
+    * { transition: none !important; }
+  }
 </style>
 </head>
 <body>
 <div class="wrap">
-  <h1>Controle de Comissão — Cassia (Comercial)</h1>
-  <p class="subtitle">Cálculo automático conforme o Anexo I – Comissionamentos, Bônus e Gatilhos de Remuneração. Os dados ficam salvos apenas neste navegador.</p>
+  <header class="page-head">
+    <div>
+      <p class="eyebrow">Anexo I &middot; Comissionamentos, bônus e gatilhos</p>
+      <h1>Controle de Comissão — Cassia</h1>
+      <p class="subtitle">Cadastre os contratos e o comissionamento é calculado sozinho: faixa por duração, dobra de bônus quando a meta do mês é batida, e gatilho de remuneração fixa por volume ativo.</p>
+    </div>
+  </header>
 
   <div id="bonusAlerts"></div>
 
@@ -174,7 +387,7 @@
 
   <div class="panel" id="panelConfig">
     <div class="panel-head" onclick="togglePanel('panelConfig')">
-      <h2>⚙️ Configurações da régua</h2>
+      <h2>Configurações da régua</h2>
       <span class="chevron">▾</span>
     </div>
     <div class="panel-body">
@@ -184,15 +397,17 @@
           <input type="number" id="cfgMeta" min="0" step="0.01" onchange="updateMeta()">
         </div>
         <div>
-          <label>Remuneração fixa base (antes do gatilho de R$ 40.000)</label>
+          <label>Remuneração fixa base (abaixo de R$ 40.000 ativos)</label>
           <input type="number" id="cfgBase" min="0" step="0.01" onchange="updateBase()">
         </div>
-        <div class="hint" style="grid-column: 1 / -1; color: var(--muted); font-size: 12.5px;">
-          Regra de bônus: se a soma dos contratos assinados em um mês atingir a meta desafio, o comissionamento
-          daquele lote de contratos dobra automaticamente (5%→10%, 7,5%→15%, 10%→20%) durante os 6 primeiros meses
-          de cada contrato daquele mês. A meta pode ser alterada aqui, mas segundo o contrato só vale para os meses
-          seguintes ao aviso à Cassia.
-          <br>Gatilho de remuneração fixa: contratos ativos somando R$ 40.000 → fixo de R$ 7.000; somando R$ 80.000 → fixo de R$ 9.000 (aplicado automaticamente abaixo).
+        <div class="config-note">
+          <strong>Bônus desafio:</strong> se a soma dos contratos assinados em um mês atingir a meta, o comissionamento
+          daquele lote dobra automaticamente (5%→10%, 7,5%→15%, 10%→20%) durante os 6 primeiros meses de cada
+          contrato daquele mês. A meta pode ser ajustada aqui, mas pelo contrato só vale para os meses seguintes ao
+          aviso à Cassia.
+          <br><br>
+          <strong>Gatilho de remuneração fixa:</strong> contratos ativos somando R$ 40.000 → fixo de R$ 7.000;
+          somando R$ 80.000 → fixo de R$ 9.000. Aplicado automaticamente no card acima.
         </div>
       </form>
     </div>
@@ -200,13 +415,13 @@
 
   <div class="panel" id="panelNew">
     <div class="panel-head" onclick="togglePanel('panelNew')">
-      <h2>➕ Novo contrato</h2>
+      <h2>Novo contrato</h2>
       <span class="chevron">▾</span>
     </div>
     <div class="panel-body">
       <form class="grid" id="formNovo" onsubmit="addContract(event)">
         <div>
-          <label>Cliente / Contrato</label>
+          <label>Cliente / contrato</label>
           <input type="text" id="fCliente" placeholder="Nome do cliente" required>
         </div>
         <div>
@@ -225,44 +440,45 @@
           <button type="submit">Adicionar contrato</button>
         </div>
       </form>
-      <p class="hint" style="color: var(--muted); font-size: 12.5px; margin-top: 10px;">
-        A faixa de comissão é calculada automaticamente pela duração: até 12 meses = 5%; de 13 a 35 meses = 7,5%;
-        acima de 36 meses = 10% — sempre sobre os 6 primeiros meses do contrato (ou menos, se o contrato tiver
-        menos de 6 meses). O valor de cada uma das 6 parcelas pode ser editado depois, para contratos com valor
-        variável mês a mês.
+      <p class="config-note" style="margin-top: 14px;">
+        A faixa de comissão vem da duração: até 12 meses = 5%; 13 a 35 meses = 7,5%; acima de 36 meses = 10% —
+        sempre sobre os 6 primeiros meses do contrato (ou menos, se o contrato tiver menos de 6 meses). O valor de
+        cada uma das parcelas pode ser editado depois, para contratos com valor variável mês a mês.
       </p>
     </div>
   </div>
 
   <div class="panel" id="panelContracts">
     <div class="panel-head" onclick="togglePanel('panelContracts')">
-      <h2>📋 Contratos</h2>
+      <h2>Contratos</h2>
       <span class="chevron">▾</span>
     </div>
     <div class="panel-body">
-      <table>
-        <thead>
-          <tr>
-            <th></th>
-            <th>Cliente</th>
-            <th>Valor mensal</th>
-            <th>Duração</th>
-            <th>Faixa</th>
-            <th>Assinatura</th>
-            <th>Comissão prevista</th>
-            <th>Comissão paga</th>
-            <th></th>
-          </tr>
-        </thead>
-        <tbody id="contractsBody"></tbody>
-      </table>
+      <div class="table-scroll">
+        <table>
+          <thead>
+            <tr>
+              <th></th>
+              <th>Cliente</th>
+              <th>Valor mensal</th>
+              <th>Duração</th>
+              <th>Faixa</th>
+              <th>Assinatura</th>
+              <th>Comissão prevista</th>
+              <th>Comissão paga</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="contractsBody"></tbody>
+        </table>
+      </div>
       <div id="contractsEmpty" class="empty" style="display:none;">Nenhum contrato cadastrado ainda.</div>
     </div>
   </div>
 
   <div class="panel" id="panelMonthly">
     <div class="panel-head" onclick="togglePanel('panelMonthly')">
-      <h2>💰 Baixa de pagamentos do mês</h2>
+      <h2>Baixa de pagamentos do mês</h2>
       <span class="chevron">▾</span>
     </div>
     <div class="panel-body">
@@ -276,35 +492,37 @@
           <button class="secondary small" onclick="markAllVisible(false)">Desmarcar todos</button>
         </div>
       </div>
-      <table>
-        <thead>
-          <tr>
-            <th>Cliente</th>
-            <th>Faixa</th>
-            <th>Valor do mês</th>
-            <th>Comissão</th>
-            <th>Status</th>
-            <th>Pago em</th>
-          </tr>
-        </thead>
-        <tbody id="monthlyBody"></tbody>
-      </table>
+      <div class="table-scroll">
+        <table>
+          <thead>
+            <tr>
+              <th>Cliente</th>
+              <th>Faixa</th>
+              <th>Valor do mês</th>
+              <th>Comissão</th>
+              <th>Status</th>
+              <th>Baixa</th>
+            </tr>
+          </thead>
+          <tbody id="monthlyBody"></tbody>
+        </table>
+      </div>
       <div id="monthlyEmpty" class="empty" style="display:none;">Nenhuma parcela de comissão prevista para este mês.</div>
-      <div id="monthlyTotal" style="margin-top: 10px; font-size: 14px; font-weight: 700;"></div>
+      <div id="monthlyTotal" class="total-line"></div>
     </div>
   </div>
 
-  <div class="panel">
-    <div class="panel-head" onclick="togglePanel(this.parentElement.id)" id="panelBackup">
-      <h2>🗄️ Backup dos dados</h2>
+  <div class="panel" id="panelBackup">
+    <div class="panel-head" onclick="togglePanel('panelBackup')">
+      <h2>Backup dos dados</h2>
       <span class="chevron">▾</span>
     </div>
     <div class="panel-body">
-      <p class="hint" style="color: var(--muted); font-size: 12.5px;">
-        Os dados são salvos automaticamente no navegador (localStorage). Use os botões abaixo para exportar um
+      <p class="config-note">
+        Os dados são salvos automaticamente neste navegador (localStorage). Use os botões abaixo para exportar um
         arquivo de backup ou restaurar a partir de um arquivo salvo anteriormente.
       </p>
-      <div style="display:flex; gap:10px;">
+      <div style="display:flex; gap:10px; margin-top: 14px;">
         <button class="secondary" onclick="exportData()">Exportar backup (.json)</button>
         <button class="secondary" onclick="document.getElementById('importFile').click()">Importar backup</button>
         <input type="file" id="importFile" accept="application/json" style="display:none" onchange="importData(event)">
@@ -312,7 +530,7 @@
     </div>
   </div>
 
-  <p class="footer-note">Anexo I – Comissionamentos, Bônus e Gatilhos de Remuneração • Cálculo automático</p>
+  <p class="footer-note">Anexo I – Comissionamentos, Bônus e Gatilhos de Remuneração &middot; cálculo automático</p>
 </div>
 
 <script>
@@ -648,20 +866,21 @@ function renderContracts() {
       <tr class="contract-row">
         <td><button class="link" onclick="toggleInstallments('${rowId}')">▾</button></td>
         <td>${escapeHtml(c.cliente)}</td>
-        <td>${fmtBRL(c.valorMensal)}</td>
+        <td class="money">${fmtBRL(c.valorMensal)}</td>
         <td>${c.duracaoMeses} meses</td>
         <td>
           <span class="badge ${cat.key}">${cat.label} · ${(taxa * 100).toFixed(1).replace('.0','')}%</span>
           ${bonus ? '<span class="badge bonus">🏆 bônus 2x</span>' : ''}
         </td>
         <td>${fmtMonth(c.mesAssinatura)}</td>
-        <td>${fmtBRL(previsto)}</td>
-        <td>${fmtBRL(pago)}</td>
+        <td class="money">${fmtBRL(previsto)}</td>
+        <td class="money">${fmtBRL(pago)}</td>
         <td class="row-actions"><button class="danger small" onclick="deleteContract('${c.id}')">Excluir</button></td>
       </tr>
       <tr class="installments-row" id="${rowId}" style="display:none;">
         <td colspan="9">
           <div class="installments-inner">
+            <div class="table-scroll">
             <table>
               <thead>
                 <tr><th>Mês</th><th>Valor do mês (editável)</th><th>Comissão (${(taxa*100).toFixed(1).replace('.0','')}%)</th><th>Status</th><th>Pago em</th><th>Baixa</th></tr>
@@ -675,7 +894,7 @@ function renderContracts() {
                         style="max-width:130px"
                         onchange="updateInstallmentValue('${c.id}', ${idx}, this.value)">
                     </td>
-                    <td>${fmtBRL(inst.pago ? inst.comissaoPaga : inst.valor * taxa)}</td>
+                    <td class="money">${fmtBRL(inst.pago ? inst.comissaoPaga : inst.valor * taxa)}</td>
                     <td><span class="badge ${inst.pago ? 'paid' : 'pending'}">${inst.pago ? 'Pago' : 'Pendente'}</span></td>
                     <td>${inst.dataPagamento ? new Date(inst.dataPagamento + 'T00:00:00').toLocaleDateString('pt-BR') : '-'}</td>
                     <td>
@@ -689,6 +908,7 @@ function renderContracts() {
                 `).join('')}
               </tbody>
             </table>
+            </div>
           </div>
         </td>
       </tr>
@@ -723,7 +943,7 @@ function renderMonthly() {
   if (rows.length === 0) {
     tbody.innerHTML = '';
     empty.style.display = 'block';
-    totalEl.textContent = '';
+    totalEl.innerHTML = '';
     return;
   }
   empty.style.display = 'none';
@@ -736,8 +956,8 @@ function renderMonthly() {
       <tr>
         <td>${escapeHtml(r.c.cliente)}</td>
         <td><span class="badge ${r.cat.key}">${r.cat.label}</span> ${r.bonus ? '<span class="badge bonus">🏆</span>' : ''}</td>
-        <td>${fmtBRL(r.inst.valor)}</td>
-        <td>${fmtBRL(comissao)}</td>
+        <td class="money">${fmtBRL(r.inst.valor)}</td>
+        <td class="money">${fmtBRL(comissao)}</td>
         <td><span class="badge ${r.inst.pago ? 'paid' : 'pending'}">${r.inst.pago ? 'Pago' : 'Pendente'}</span></td>
         <td>
           <label class="paid-check">
@@ -750,7 +970,7 @@ function renderMonthly() {
     `;
   }).join('');
 
-  totalEl.textContent = `Total pendente: ${fmtBRL(totalPrevisto)}  ·  Total já pago: ${fmtBRL(totalPago)}`;
+  totalEl.innerHTML = `<span>${fmtBRL(totalPrevisto)} <span class="dim">pendente</span></span><span>${fmtBRL(totalPago)} <span class="dim">já pago</span></span>`;
 }
 
 function escapeHtml(str) {
