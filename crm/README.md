@@ -57,10 +57,15 @@ npm run preview
   trabalho" são criadas com quem já está na empresa nova — a empresa
   anterior fica registrada na ficha do contato. Conexões criadas/editadas
   manualmente nunca são sobrescritas por essa lógica automática.
-- **Funil de Vendas** — etapas configuráveis (Configurações → Funil de
-  vendas), visualização **Kanban** (drag and drop entre etapas) ou **Lista**.
-  Cada oportunidade tem: empresa, contato, nome, proposta (o que foi
-  ofertado), valor, mês trabalhado, previsão de fechamento e observações.
+- **Funil de Vendas** — suporta **múltiplos funis** (ex.: um para captação de
+  empresas, outro para renovação, outro para pessoa física): um filtro no
+  topo da página escolhe qual funil ver, "Novo funil" cria um do zero, e
+  "Etapas" abre o editor das etapas daquele funil específico (criar,
+  renomear, reordenar, excluir) — sem precisar ir em Configurações, embora
+  o mesmo editor também esteja lá. Visualização **Kanban** (drag and drop
+  entre etapas) ou **Lista**. Cada oportunidade tem: empresa, contato, nome,
+  proposta (o que foi ofertado), valor, mês trabalhado, previsão de
+  fechamento e observações.
 - **Ganho → Doação** — ao clicar em "Marcar venda" numa oportunidade, abre um
   formulário para lançar a doação gerada: projeto apoiado, cota/categoria,
   valor total e número de parcelas. As parcelas mensais são geradas

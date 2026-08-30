@@ -18,11 +18,13 @@ import { StageColumn } from '../components/kanban/StageColumn';
 import { OpportunityCardView } from '../components/kanban/OpportunityCardView';
 import { OpportunityForm } from '../components/OpportunityForm';
 import { OpportunityDrawer } from '../components/OpportunityDrawer';
+import { StagesEditor } from '../components/StagesEditor';
 import { Modal } from '../components/ui/Modal';
-import { Badge, Button, Select } from '../components/ui/Primitives';
+import { Badge, Button, Field, Input, Select } from '../components/ui/Primitives';
 import { moveOpportunity } from '../services/opportunities';
+import { createFunnel } from '../services/funnels';
 import { formatCurrency, formatDate, formatMonthKey } from '../lib/format';
-import { Kanban, List, Plus } from 'lucide-react';
+import { Kanban, List, ListTree, Plus } from 'lucide-react';
 
 export function FunnelPage() {
   const funnels = useLiveQuery(() => db.funnels.toArray(), []);
@@ -75,6 +77,19 @@ export function FunnelPage() {
 
   const [creatingStageId, setCreatingStageId] = useState<string | null>(null);
   const [selectedOpportunityId, setSelectedOpportunityId] = useState<string | null>(null);
+  const [creatingFunnel, setCreatingFunnel] = useState(false);
+  const [newFunnelName, setNewFunnelName] = useState('');
+  const [managingStages, setManagingStages] = useState(false);
+
+  async function handleCreateFunnel() {
+    const name = newFunnelName.trim();
+    if (!name) return;
+    const id = await createFunnel(name);
+    setFunnelId(id);
+    setNewFunnelName('');
+    setCreatingFunnel(false);
+    setManagingStages(true);
+  }
 
   function findContainer(id: string): string | undefined {
     if (columns[id]) return id;
@@ -153,7 +168,7 @@ export function FunnelPage() {
           <p className="text-sm text-slate-500">Prospecção e fechamento de empresas doadoras</p>
         </div>
         <div className="flex items-center gap-2">
-          {funnels && funnels.length > 1 && (
+          {funnels && funnels.length > 0 && (
             <Select value={funnelId} onChange={(e) => setFunnelId(e.target.value)} className="w-48">
               {funnels.map((f) => (
                 <option key={f.id} value={f.id}>
@@ -162,6 +177,12 @@ export function FunnelPage() {
               ))}
             </Select>
           )}
+          <Button variant="secondary" onClick={() => setCreatingFunnel(true)}>
+            <Plus size={15} /> Novo funil
+          </Button>
+          <Button variant="secondary" onClick={() => setManagingStages(true)} disabled={!funnelId}>
+            <ListTree size={15} /> Etapas
+          </Button>
           <div className="flex rounded-md border border-slate-300 bg-white p-0.5">
             <button
               onClick={() => setView('kanban')}
@@ -201,9 +222,12 @@ export function FunnelPage() {
               />
             ))}
             {stages?.length === 0 && (
-              <p className="text-sm text-slate-400">
-                Nenhuma etapa configurada. Crie etapas em Configurações.
-              </p>
+              <div className="flex flex-col items-start gap-2 text-sm text-slate-400">
+                <p>Este funil ainda não tem etapas.</p>
+                <Button variant="secondary" onClick={() => setManagingStages(true)}>
+                  <ListTree size={15} /> Criar etapas
+                </Button>
+              </div>
             )}
           </div>
           <DragOverlay>{activeOpportunity && <OpportunityCardView opportunity={activeOpportunity} />}</DragOverlay>
@@ -273,6 +297,32 @@ export function FunnelPage() {
       {selectedOpportunityId && (
         <OpportunityDrawer opportunityId={selectedOpportunityId} onClose={() => setSelectedOpportunityId(null)} />
       )}
+
+      <Modal open={creatingFunnel} onClose={() => setCreatingFunnel(false)} title="Novo funil" width="sm">
+        <div className="space-y-4">
+          <Field label="Nome do funil">
+            <Input
+              value={newFunnelName}
+              onChange={(e) => setNewFunnelName(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), handleCreateFunnel())}
+              placeholder="Ex.: Captação de Pessoa Física"
+              autoFocus
+            />
+          </Field>
+          <div className="flex justify-end gap-2">
+            <Button variant="secondary" onClick={() => setCreatingFunnel(false)}>
+              Cancelar
+            </Button>
+            <Button onClick={handleCreateFunnel} disabled={!newFunnelName.trim()}>
+              Criar funil
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      <Modal open={managingStages} onClose={() => setManagingStages(false)} title="Etapas do funil" width="lg">
+        {funnelId && <StagesEditor funnelId={funnelId} />}
+      </Modal>
     </div>
   );
 }
