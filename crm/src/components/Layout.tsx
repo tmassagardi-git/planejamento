@@ -1,6 +1,7 @@
 import { NavLink, Outlet } from 'react-router-dom';
 import { Building2, Kanban, HeartHandshake, LayoutDashboard, Settings, Target, Users } from 'lucide-react';
 import clsx from 'clsx';
+import { GlobalSearch } from './GlobalSearch';
 
 const NAV = [
   { to: '/empresas', label: 'Empresas', icon: Building2 },
@@ -39,9 +40,14 @@ export function Layout() {
         </nav>
         <div className="mt-auto px-5 py-4 text-xs text-slate-400">Dados salvos localmente neste navegador</div>
       </aside>
-      <main className="flex-1 overflow-y-auto">
-        <Outlet />
-      </main>
+      <div className="flex flex-1 flex-col overflow-hidden">
+        <header className="flex shrink-0 items-center border-b border-slate-200 bg-white px-6 py-3">
+          <GlobalSearch />
+        </header>
+        <main className="flex-1 overflow-y-auto">
+          <Outlet />
+        </main>
+      </div>
     </div>
   );
 }

@@ -26,6 +26,11 @@ npm run preview
 
 ## Funcionalidades
 
+- **Busca global** — barra fixa no topo, presente em todas as páginas. Ao
+  digitar (mínimo 2 caracteres), mostra na hora os resultados encontrados em
+  empresas, contatos, oportunidades, doações e avaliações VIC, cada um com um
+  selo indicando o tipo. Clicar num resultado abre a ficha/drawer certa
+  direto, não importa em qual página você estava.
 - **Empresas** — cadastro (nome, CNPJ, segmento, contato, endereço, tags,
   observações), busca, e ficha detalhada com abas:
   - **Dados** — informações cadastrais
