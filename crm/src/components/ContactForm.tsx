@@ -11,14 +11,14 @@ export function ContactForm({
   onSaved,
   onCancel,
 }: {
-  companyId: string;
+  companyId?: string;
   contact?: Contact;
   onSaved: () => void;
   onCancel: () => void;
 }) {
   const companies = useLiveQuery(() => db.companies.orderBy('name').toArray(), []);
   const [form, setForm] = useState<ContactInput>({
-    companyId,
+    companyId: contact?.companyId ?? companyId ?? '',
     name: contact?.name ?? '',
     role: contact?.role ?? '',
     phone: contact?.phone ?? '',
@@ -32,9 +32,11 @@ export function ContactForm({
   const set = <K extends keyof ContactInput>(key: K, value: ContactInput[K]) =>
     setForm((f) => ({ ...f, [key]: value }));
 
+  const showCompanySelect = !!contact || !companyId;
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!form.name.trim()) return;
+    if (!form.name.trim() || !form.companyId) return;
     setSaving(true);
     try {
       if (contact) {
@@ -58,16 +60,17 @@ export function ContactForm({
           <Input value={form.role} onChange={(e) => set('role', e.target.value)} />
         </Field>
       </div>
-      {contact && (
-        <Field label="Empresa">
-          <Select value={form.companyId} onChange={(e) => set('companyId', e.target.value)}>
+      {showCompanySelect && (
+        <Field label="Empresa *">
+          <Select value={form.companyId} onChange={(e) => set('companyId', e.target.value)} required>
+            <option value="">Selecione...</option>
             {companies?.map((c) => (
               <option key={c.id} value={c.id}>
                 {c.name}
               </option>
             ))}
           </Select>
-          {form.companyId !== contact.companyId && (
+          {contact && form.companyId !== contact.companyId && (
             <p className="mt-1 text-xs text-amber-600">
               As conexões de "Colegas de trabalho" com a empresa atual passarão para "Ex colega de trabalho".
             </p>

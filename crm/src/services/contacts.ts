@@ -31,5 +31,12 @@ export async function updateContact(id: string, patch: Partial<ContactInput>): P
 }
 
 export async function deleteContact(id: string): Promise<void> {
-  await db.contacts.delete(id);
+  await db.transaction('rw', db.contacts, db.contactConnections, async () => {
+    const [asA, asB] = await Promise.all([
+      db.contactConnections.where('contactAId').equals(id).toArray(),
+      db.contactConnections.where('contactBId').equals(id).toArray(),
+    ]);
+    await db.contactConnections.bulkDelete([...asA, ...asB].map((c) => c.id));
+    await db.contacts.delete(id);
+  });
 }

@@ -34,7 +34,13 @@ npm run preview
     WhatsApp, e-mail)
   - **Histórico de Doações** — todas as doações da empresa, cada uma
     expansível para ver as parcelas
-- **Mapa de relacionamento** — clicando no nome de um contato abre um mapa
+- **Contatos** — lista global de todos os contatos cadastrados, de todas as
+  empresas, com busca por nome/cargo/empresa/e-mail. Permite criar um
+  contato escolhendo a empresa na hora (sem precisar abrir a ficha dela
+  antes), editar, excluir e abrir o mapa de relacionamento ou a ficha da
+  empresa direto da linha.
+- **Mapa de relacionamento** — clicando no nome de um contato (na página
+  Contatos ou na ficha da empresa) abre um mapa
   visual com todas as suas conexões (familiares, amigos, colegas de
   trabalho...) com qualquer outro contato do sistema, mesmo de outra
   empresa. Ao adicionar uma conexão, o tipo pode ser diferente em cada
