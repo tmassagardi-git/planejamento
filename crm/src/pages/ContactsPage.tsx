@@ -86,7 +86,7 @@ export function ContactsPage() {
                 <tr key={contact.id} className="hover:bg-slate-50">
                   <td className="px-4 py-3 font-medium text-slate-900">
                     <div className="flex items-center gap-2">
-                      <button onClick={() => setMapContactId(contact.id)} className="hover:text-indigo-600 hover:underline">
+                      <button onClick={() => setEditingContact(contact)} className="hover:text-indigo-600 hover:underline">
                         {contact.name}
                       </button>
                       {contact.isPrimary && <Badge color="indigo">Principal</Badge>}

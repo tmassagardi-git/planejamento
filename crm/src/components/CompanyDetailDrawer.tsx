@@ -139,7 +139,7 @@ export function CompanyDetailDrawer({
               <div key={contact.id} className="flex items-start justify-between rounded-lg border border-slate-200 p-3">
                 <div>
                   <div className="flex items-center gap-2 font-medium text-slate-900">
-                    <button onClick={() => setMapContactId(contact.id)} className="hover:text-indigo-600 hover:underline">
+                    <button onClick={() => setEditingContact(contact)} className="hover:text-indigo-600 hover:underline">
                       {contact.name}
                     </button>
                     {contact.isPrimary && <Badge color="indigo">Principal</Badge>}
