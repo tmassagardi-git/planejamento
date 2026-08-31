@@ -1,3 +1,7 @@
+> Este repositório também contém, em [`app/`](app/README.md), o **TaskFlow**,
+> uma aplicação de gestão de tarefas (Lista, Kanban e Calendário) — projeto
+> independente do conteúdo abaixo.
+
 # KairOS — Integração Telemarketing (ApiSTI)
 
 Cliente de integração com a API de Telemarketing da plataforma de doações
