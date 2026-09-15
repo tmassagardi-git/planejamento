@@ -10,24 +10,36 @@ usada para alimentar os painéis do KairOS.
 
 ## Autenticação e escopo
 
-- Cada chamada exige `codigo_cliente` + `token`.
+- Cada chamada exige `codigo_cliente` + token ativo.
+- **Forma recomendada pela doc oficial**: enviar o token no header `X-API-Token: SEU_TOKEN`
+  (também aceito: `Authorization: Bearer SEU_TOKEN`). O parâmetro `token` na URL
+  continua funcionando (é o que usamos hoje, e o que os exemplos abaixo mostram por
+  simplicidade), mas a própria doc avisa que **pode aparecer em históricos e logs de
+  proxy** — preferir header em qualquer integração nova.
 - Clientes têm **acessos individuais** — nem todo token necessariamente serve para
   todo `codigo_cliente`. Por isso os tokens são armazenados por cliente em
   `config/clients.json` (fora do git — veja `config/clients.example.json`).
+- Health check do banco do cliente (não revela servidor/usuário/senha do Firebird):
+  `GET /scriptcase/app/ApiSTI/api_saude/?formato=json&codigo_cliente=HCL` (com header/token).
+- Erros: `400` parâmetro ausente/inválido, `401` cliente/token/validade inválidos,
+  `500` falha na consulta, `503` autenticação central ou banco do cliente indisponível.
+  Toda resposta de erro traz um `request_id` para rastreio.
 
 ## Parâmetros de consulta
 
 | Parâmetro        | Exemplo               | Descrição                                  |
 |-------------------|------------------------|---------------------------------------------|
 | `codigo_cliente`  | `HCL`                  | Código do cliente                            |
-| `token`           | `72f9cf2d...`          | Token de acesso do cliente                   |
-| `recurso`         | `dashboard`            | Recurso consultado (ver seção abaixo) — omitido, o default é a listagem detalhada de doações |
-| `vencimento_ini`  | `2026-07-01`           | Início do período de vencimento (recurso padrão/`doacoes`) |
-| `vencimento_fim`  | `2026-07-31`           | Fim do período de vencimento (recurso padrão/`doacoes`) |
-| `data_ini`        | `2026-07-01`           | Início do período de **pagamento/baixa** (recursos `dashboard`, `recebido`, `previsto`) |
-| `data_fim`        | `2026-07-31`           | Fim do período de pagamento/baixa (idem)     |
-| `pagina`          | `1`                    | Página atual (1-based) — só se aplica à listagem detalhada |
-| `limite`          | `1000`                 | Registros por página — idem                 |
+| `token`           | `72f9cf2d...`          | Token de acesso do cliente (ou via header, ver acima) |
+| `recurso`         | `dashboard`            | Recurso consultado (ver seção abaixo) — omitido, o default é a listagem paginada de doações |
+| `pagina`          | `1`                    | Página atual (1-based), inteiro > 0 — só na listagem de doações |
+| `limite`          | `1000`                 | Registros por página — deve ser **exatamente 1000**, só na listagem de doações |
+| `vencimento_ini`/`vencimento_fim` | `2026-07-01`/`2026-07-31` | Período de vencimento — listagem de doações |
+| `pagamento_ini`/`pagamento_fim`   | `2026-07-01`/`2026-07-31` | Período de pagamento/baixa — **também disponível na listagem de doações** (descoberto via doc oficial em 2026-09-15; não é exclusivo do `recurso=dashboard`) |
+| `data_ini`/`data_fim` | `2026-07-01`/`2026-07-31` | Período (intervalo máx. **366 dias**) — obrigatório nos recursos de `dashboard` (ver abaixo) |
+| `contribuinte`, `nossonum`, `tipodoador`, `genero`, `tpdoac`, `status_doacao`, `operador`, `operadorfixo` | — | Filtros opcionais adicionais da listagem de doações (documentados oficialmente, ainda não usados neste cliente/no KairOS) |
+
+Datas sempre em `AAAA-MM-DD`, enviadas como intervalo completo.
 
 Exemplo (busca vencimentos de julho/2026 do cliente HCL):
 
@@ -37,21 +49,30 @@ https://tele.ongrentavel.com.br/scriptcase/app/ApiSTI/blank/?codigo_cliente=HCL&
 
 ## Outros recursos (`recurso=...`)
 
-Além da listagem detalhada de doações (default, sem `recurso` ou `recurso=doacoes`,
-filtrada por `vencimento_ini`/`vencimento_fim` e paginada), a API expõe recursos de
-totais já agregados para um intervalo, filtrados por `data_ini`/`data_fim`
-(data de **pagamento/baixa**, não de vencimento) e sem paginação:
+Documentados oficialmente em `/scriptcase/app/ApiSTI/api_saude/` e confirmados com
+dados reais do HCL (agosto/2026). Todos exigem `data_ini`/`data_fim` (máx. 366 dias),
+não usam paginação, e refletem **data de pagamento/baixa** (não vencimento):
 
-- `recurso=dashboard` — retorna num único JSON: previsto (valor + contribuintes),
-  recebido (valor + contribuintes), fichas novas, fichas recuperadas, recebido por
-  operador/turma, por tipo de pagamento, por dia, e resumo de mensageiros/operadores
-  ativos. **Em produção desde 2026-09-14** (KairOS/Lovable, `tlm-dashboard-sync.server.ts`),
-  sincronizado mês a mês para as tabelas `tlm_dash_*`. Ver
-  `.lovable/plan/integração-api-hcl-usar-os-endpoints-de-totais-dashboard-2026-09-14.md`
-  no projeto Lovable para o plano completo.
-- `recurso=recebido` — só o valor recebido no intervalo (subconjunto do que
-  `dashboard` já traz).
-- `recurso=previsto` — só o valor previsto no intervalo.
+| `recurso=` | Retorno (campos) | Exemplo real (HCL, ago/2026) |
+|---|---|---|
+| `dashboard` | Executa todos os recursos abaixo numa única chamada, uma conexão Firebird | — |
+| `previsto` | `{valor_previsto, contribuintes}` | `R$ 1.928.177,90` / 49.752 contribuintes |
+| `recebido` | `{valor_recebido, contribuintes}` | `R$ 1.377.423,75` / 34.354 contribuintes |
+| `fichasNovas` | `{fichas_novas, valor_recebido}` | 257 fichas / `R$ 9.766,00` |
+| `fichasRec` | `{fichas_recuperadas, valor_recebido}` | 84 fichas / `R$ 3.853,00` |
+| `turmaOperador` | lista: `{turma, operador, nome_operador, valor_recebido, contribuintes}` | 70 operadores no mês |
+| `tipoPagamento` | lista: `{tipo_pagamento, valor_recebido, contribuintes}` | 4 tipos (Boleto, Copel, Pay&Go, …) |
+| `dia` | lista: `{data, valor_recebido, quantidade_paga, contribuintes}` | 31 linhas (uma por dia do período) |
+| `mensageiroResumo` | `{mensageiros, valor_recebido}` | `{0, R$ 0,00}` — HCL não usa mensageiros |
+| `operadoresAtivos` | `{operadores_ativos, valor_recebido}` | 48 operadores ativos |
+| `mensageirosAtivos` | `{mensageiros_ativos, valor_recebido}` | `{0, R$ 0,00}` |
+
+`recurso=dashboard` está **em produção desde 2026-09-14** (KairOS/Lovable,
+`tlm-dashboard-sync.server.ts`), sincronizado mês a mês para as tabelas `tlm_dash_*`.
+Ver `.lovable/plan/integração-api-hcl-usar-os-endpoints-de-totais-dashboard-2026-09-14.md`
+no projeto Lovable para o plano completo. Os demais sub-recursos (`turmaOperador`,
+`tipoPagamento`, `dia`, etc.) já vêm embutidos na resposta de `dashboard` — chamá-los
+individualmente só é útil para depuração ou para buscar um único bloco mais rápido.
 
 Exemplo (recebido em julho/2026, cliente HCL):
 
