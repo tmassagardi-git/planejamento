@@ -158,6 +158,22 @@ Observações importantes:
   `?recurso=recebido&codigo_cliente=HCL&data_ini=2026-07-01&data_fim=2026-07-31`
   (com header `X-API-Token`, ou `&token=...` por compatibilidade).
 
+⚠️ **Latência e concorrência:** em testes reais, uma única chamada a
+`fichasNovas` já levou ~18-20s em condições normais, e sob uso mais intenso
+(várias chamadas em sequência/paralelo durante uma sessão de testes) chamadas
+a `previsto`/`recebido`/`fichasNovas` chegaram a ultrapassar 60s ou dar
+timeout. A API parece rodar sobre um banco Firebird por cliente (conforme a
+doc oficial) e não parece dimensionada para alta concorrência. Por isso:
+  - `src/apiClient.js` usa timeout de 45s por chamada (`ApiStiError` claro em
+    vez de travar indefinidamente).
+  - `src/dashboardService.js` limita a concorrência de páginas da consulta de
+    doações filtrada por operadora (`CONCURRENCY_CONSULTA_OPERADORA = 4`) e
+    cacheia por alguns segundos buscas idênticas entre `/api/resumo` e
+    `/api/serie-mensal` para não duplicar carga na API.
+  - Evite rodar `npm run sample`/testes de carga repetidos em sequência
+    contra o ambiente de produção da STI — pode degradar a resposta para
+    outros consumidores (inclusive o próprio painel) por alguns minutos.
+
 ### Amostras reais
 
 `npm run sample -- --cliente=HCL --inicio=2026-07-01 --fim=2026-07-31` busca

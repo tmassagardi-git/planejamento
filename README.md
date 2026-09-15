@@ -22,7 +22,11 @@ operadora). Ver detalhes da API em [`docs/api-sti.md`](docs/api-sti.md).
 - [x] Script de amostragem (`scripts/sample-databases.js` / `npm run sample`)
       — busca até 100 linhas de cada um dos 11 "bancos" (doações + 10
       recursos de dashboard) para inspeção de schema.
-- [ ] Painéis (visão geral / filtro por operadora / gráficos) — próxima etapa
+- [x] **Painel web** (`src/server.js` + `public/`, `npm run dashboard`) — filtros
+      (período, tipo de data, operadora, valor/quantidade), resumo previsto x
+      realizado + fichas novas, gráfico de linha mês a mês, gráfico de fichas
+      novas e lista de doadores/doações paginada. Testado em navegador real
+      contra a API (cliente HCL, julho/2026).
 
 ## Instalação
 
@@ -65,6 +69,36 @@ Se rodar num ambiente sandboxed com proxy de saída obrigatório e receber
 `NODE_USE_ENV_PROXY=1` em `docs/api-sti.md` (o `fetch` nativo do Node não lê
 `HTTPS_PROXY` por padrão).
 
+## Painel (dashboard)
+
+```bash
+npm run dashboard
+# ou numa porta específica:
+PORT=4000 npm run dashboard
+```
+
+Abre um servidor local (`http://localhost:3000`, sem dependências externas —
+`http` nativo do Node servindo `public/` + uma API fina em `/api/*`) com:
+
+- Filtros: período (data de vencimento ou pagamento/baixa), operadora,
+  exibição em valor (R$) ou quantidade.
+- Cards de resumo: previsto, realizado e fichas novas (valor + quantidade).
+- Gráfico de linha previsto x realizado, mês a mês, no período selecionado.
+- Gráfico de fichas novas, mês a mês.
+- Lista paginada de doadores e suas doações (nome, operadora, vencimento,
+  valor previsto, pagamento, valor pago, status — **sem** CPF/telefone/e-mail/
+  endereço; para o registro completo use `npm run fetch`/`npm run sample`).
+
+Detalhes de design (por que previsto/realizado mudam de fonte quando há
+filtro de operadora, limites de período, etc.) estão comentados no topo de
+`src/dashboardService.js` e na seção "Recursos de dashboard" de
+[`docs/api-sti.md`](docs/api-sti.md), que também documenta a latência da API
+da STI sob carga.
+
+O Chart.js usado pelos gráficos está vendorizado em `public/vendor/` (baixado
+via npm, não via CDN) para o painel funcionar mesmo em redes que bloqueiam
+CDNs externos — ver `public/vendor/NOTICE.md`.
+
 ## Testes
 
 ```bash
@@ -73,22 +107,32 @@ npm test
 
 Os testes usam um `fetch` mockado (sem chamar a API real) para validar:
 montagem da URL, tratamento de erros HTTP/JSON/negócio (`status:false`), loop
-de paginação até o total de páginas informado, trava de segurança
-(`maxPages`), exigência de `limite=1000` e retry em erro 5xx.
+de paginação até o total de páginas informado (sequencial e concorrente),
+trava de segurança (`maxPages`), exigência de `limite=1000`, retry em erro
+5xx, os recursos de dashboard, e toda a lógica de agregação do painel
+(`dashboardService.js`: divisão em meses/fatias de dias, resumo com/sem
+operadora, séries mensais, projeção de campos não sensíveis na lista de
+doadores).
 
 ## Estrutura
 
 ```
 src/
-  apiClient.js   # cliente HTTP + paginação + parsing tolerante a schema
-  config.js      # carrega .env e config/clients.json
-  cliArgs.js     # parser simples de flags --chave=valor
+  apiClient.js        # cliente HTTP + paginação + parsing tolerante a schema
+  dashboardService.js # agregações do painel sobre apiClient.js (resumo, séries, doadores)
+  server.js           # servidor HTTP do painel (API fina + estático de public/)
+  config.js           # carrega .env e config/clients.json
+  cliArgs.js          # parser simples de flags --chave=valor
+public/
+  index.html, app.js, styles.css # front-end do painel
+  vendor/chart.umd.js  # Chart.js vendorizado (ver vendor/NOTICE.md)
 scripts/
   inspect.js     # imprime a resposta bruta da API (para confirmar schema)
   fetch-client.js# busca todas as páginas de um cliente/período e salva em output/
   sample-databases.js # busca até 100 linhas de cada "banco" (doações + recursos de dashboard)
 test/
   apiClient.test.js
+  dashboardService.test.js
 docs/
   api-sti.md     # referência da API: schema confirmado, campos e regras
 config/
@@ -99,20 +143,11 @@ output/
 
 ## Próximos passos
 
-Com o schema de todos os "bancos" já confirmado (doações + 10 recursos de
-dashboard, ver [`docs/api-sti.md`](docs/api-sti.md)), a ideia é levar esta
-lógica de integração para o KairOS (Lovable ou front-end dedicado) e montar
-um painel com:
-
-1. **Filtros no topo** — por período (data de vencimento/baixa), operadora
-   (`turmaOperador`/`operador`) e tipo (quantidade x valor).
-2. **Resumo** — previsto x realizado (`previsto`/`recebido`), em valor e
-   quantidade, + fichas novas (`fichasNovas`).
-3. **Gráfico de linha mês a mês** — previsto x realizado no período
-   selecionado (base: recurso `dia`, agregado por mês no cliente).
-4. **Gráfico de fichas novas** — base: recurso `fichasNovas` por período.
-5. **Lista de doadores e suas doações** — dá para montar direto da consulta
-   de doações paginada (não precisa de recurso separado).
-
-Possível sincronização periódica para uma tabela no Supabase, para os
-painéis lerem dados já agregados em vez de chamar a API a cada acesso.
+- Sincronização periódica para uma tabela no Supabase, para o painel ler
+  dados já agregados em vez de chamar a API a cada acesso (reduziria a
+  exposição à latência/instabilidade da API da STI sob carga, ver
+  [`docs/api-sti.md`](docs/api-sti.md)).
+- Autenticação/controle de acesso no painel, caso ele saia de uso interno
+  restrito para um público maior.
+- Suporte a múltiplos clientes (`?cliente=`) na UI, hoje fixo em HCL — o
+  back-end (`src/server.js`/`dashboardService.js`) já é agnóstico de cliente.

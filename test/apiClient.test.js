@@ -138,6 +138,39 @@ test('fetchAllRecords pagina até o total informado e agrega os registros', asyn
   assert.equal(result.pagesFetched, 3);
 });
 
+test('fetchAllRecords com concurrency > 1 busca todas as páginas em paralelo sem perder registros', async () => {
+  const emVooSimultaneo = new Set();
+  let maxSimultaneas = 0;
+  const totalPaginas = 6;
+
+  const fetchImpl = async (url) => {
+    const pagina = Number(new URL(url).searchParams.get('pagina'));
+    emVooSimultaneo.add(pagina);
+    maxSimultaneas = Math.max(maxSimultaneas, emVooSimultaneo.size);
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    emVooSimultaneo.delete(pagina);
+    return jsonResponse(200, { dados: [{ id: pagina }], total_paginas: totalPaginas, pagina });
+  };
+
+  const result = await fetchAllRecords({
+    baseUrl: 'https://example.com/',
+    token: 'tok',
+    codigoCliente: 'HCL',
+    vencimentoIni: '2026-07-01',
+    vencimentoFim: '2026-07-31',
+    delayMs: 0,
+    concurrency: 3,
+    fetchImpl,
+  });
+
+  assert.equal(result.records.length, totalPaginas);
+  assert.deepEqual(
+    result.records.map((r) => r.id).sort((a, b) => a - b),
+    [1, 2, 3, 4, 5, 6]
+  );
+  assert.ok(maxSimultaneas > 1, `esperava chamadas concorrentes, maxSimultaneas=${maxSimultaneas}`);
+});
+
 test('fetchAllRecords respeita maxPages como trava de segurança', async () => {
   const fetchImpl = async () => jsonResponse(200, { dados: [{ id: 1 }], total_paginas: 999 });
 

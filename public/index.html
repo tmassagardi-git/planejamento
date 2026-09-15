@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>KairOS Monitor — HCL</title>
+<link rel="stylesheet" href="styles.css" />
+<script src="vendor/chart.umd.js"></script>
+</head>
+<body>
+  <header class="topo">
+    <h1>KairOS Monitor <span class="cliente-badge" id="clienteBadge">HCL</span></h1>
+    <p class="subtitulo">Telemarketing (ApiSTI) — Hospital do Câncer de Londrina</p>
+  </header>
+
+  <section class="filtros" aria-label="Filtros">
+    <div class="campo">
+      <label for="dataIni">Período — de</label>
+      <input type="date" id="dataIni" />
+    </div>
+    <div class="campo">
+      <label for="dataFim">até</label>
+      <input type="date" id="dataFim" />
+    </div>
+    <div class="campo">
+      <label for="tipoData">Tipo de data</label>
+      <select id="tipoData">
+        <option value="vencimento">Vencimento (previsto)</option>
+        <option value="pagamento">Pagamento (baixa/realizado)</option>
+      </select>
+    </div>
+    <div class="campo">
+      <label for="operador">Operadora</label>
+      <select id="operador">
+        <option value="">Todas</option>
+      </select>
+    </div>
+    <div class="campo">
+      <label for="metrica">Exibir</label>
+      <select id="metrica">
+        <option value="valor">Valor (R$)</option>
+        <option value="qtd">Quantidade</option>
+      </select>
+    </div>
+    <button id="btnAplicar" class="botao-aplicar">Aplicar filtros</button>
+    <span id="avisoCarregando" class="aviso-carregando" hidden>Carregando dados da API (pode levar até ~20s)...</span>
+  </section>
+
+  <div id="avisoErro" class="aviso-erro" hidden></div>
+
+  <section class="resumo" aria-label="Resumo do período">
+    <article class="card">
+      <h2>Previsto</h2>
+      <p class="valor-principal" id="resumoPrevistoValor">—</p>
+      <p class="valor-secundario" id="resumoPrevistoQtd">—</p>
+    </article>
+    <article class="card">
+      <h2>Realizado</h2>
+      <p class="valor-principal" id="resumoRealizadoValor">—</p>
+      <p class="valor-secundario" id="resumoRealizadoQtd">—</p>
+    </article>
+    <article class="card">
+      <h2>Fichas novas</h2>
+      <p class="valor-principal" id="resumoFichasQtd">—</p>
+      <p class="valor-secundario" id="resumoFichasValor">—</p>
+    </article>
+  </section>
+
+  <section class="graficos">
+    <article class="painel-grafico">
+      <h2>Previsto x Realizado — mês a mês</h2>
+      <canvas id="chartMensal" height="110"></canvas>
+    </article>
+    <article class="painel-grafico">
+      <h2>Fichas novas — mês a mês</h2>
+      <canvas id="chartFichasNovas" height="110"></canvas>
+    </article>
+  </section>
+
+  <section class="lista-doadores">
+    <h2>Doadores e doações</h2>
+    <div class="tabela-scroll">
+      <table>
+        <thead>
+          <tr>
+            <th>Doador</th>
+            <th>ID</th>
+            <th>Operadora</th>
+            <th>Vencimento</th>
+            <th>Valor previsto</th>
+            <th>Pagamento</th>
+            <th>Valor pago</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody id="tabelaDoadoresBody">
+          <tr><td colspan="8" class="vazio">Carregando...</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="paginacao">
+      <button id="btnPaginaAnterior">&larr; Anterior</button>
+      <span id="infoPagina">página 1</span>
+      <button id="btnProximaPagina">Próxima &rarr;</button>
+    </div>
+    <p class="nota-pii">
+      Por padrão a tabela não exibe CPF, telefone, e-mail ou endereço.
+      Esses dados continuam disponíveis via <code>npm run fetch</code>/<code>npm run sample</code> para quem precisar.
+    </p>
+  </section>
+
+  <script src="app.js"></script>
+</body>
+</html>

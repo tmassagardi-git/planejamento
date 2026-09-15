@@ -122,7 +122,7 @@ export function parseApiResponse(json) {
 // recursos de dashboard. O token vai preferencialmente no header X-API-Token
 // (recomendado pela documentação real da API — evita o token aparecer em
 // históricos/logs de proxy, ao contrário de mandá-lo na query string).
-async function requestRaw({ url, token, label, fetchImpl = fetch, timeoutMs = 20000 }) {
+async function requestRaw({ url, token, label, fetchImpl = fetch, timeoutMs = 45000 }) {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), timeoutMs);
 
@@ -224,7 +224,7 @@ export async function fetchDashboardResource({
   dataIni,
   dataFim,
   fetchImpl,
-  timeoutMs = 30000,
+  timeoutMs = 45000,
 }) {
   const url = buildQueryUrl(baseUrl, {
     recurso,
@@ -279,6 +279,7 @@ export async function fetchAllRecords({
   limite = REQUIRED_LIMITE,
   maxPages = 500,
   delayMs = 150,
+  concurrency = 1,
   fetchImpl,
   onPage,
   filtros,
@@ -311,11 +312,38 @@ export async function fetchAllRecords({
     });
   }
 
-  for (let pagina = 2; pagina <= pagesToFetch; pagina += 1) {
-    if (delayMs > 0) await sleep(delayMs);
-    const page = await withRetry(() => fetchPage({ ...requestOptions, pagina }));
-    allRecords.push(...page.records);
-    onPage?.({ pagina, totalPages, registrosNaPagina: page.records.length, acumulado: allRecords.length });
+  // Páginas 2..N: por padrão (concurrency=1) sequenciais, preservando a ordem
+  // de chegada em `allRecords` e do callback `onPage` — comportamento
+  // original, usado por scripts/fetch-client.js. Com concurrency > 1 (usado
+  // por src/dashboardService.js para consultas filtradas por operadora, onde
+  // a latência de dezenas de páginas sequenciais é inaceitável numa UI), as
+  // páginas são buscadas em paralelo em lotes; a ordem dos registros dentro
+  // de `allRecords` não é mais garantida, mas o conteúdo agregado é o mesmo.
+  const paginasRestantes = [];
+  for (let pagina = 2; pagina <= pagesToFetch; pagina += 1) paginasRestantes.push(pagina);
+
+  const paginasPorNumero = new Map();
+  let proximoIndice = 0;
+  let acumulado = allRecords.length;
+  async function buscarProximaPagina() {
+    for (;;) {
+      const meuIndice = proximoIndice;
+      proximoIndice += 1;
+      if (meuIndice >= paginasRestantes.length) return;
+      const pagina = paginasRestantes[meuIndice];
+      if (delayMs > 0) await sleep(delayMs);
+      const page = await withRetry(() => fetchPage({ ...requestOptions, pagina }));
+      paginasPorNumero.set(pagina, page.records);
+      acumulado += page.records.length;
+      onPage?.({ pagina, totalPages, registrosNaPagina: page.records.length, acumulado });
+    }
+  }
+
+  const numeroDeWorkers = Math.max(1, Math.min(concurrency, paginasRestantes.length));
+  await Promise.all(Array.from({ length: numeroDeWorkers }, buscarProximaPagina));
+
+  for (const pagina of paginasRestantes) {
+    allRecords.push(...(paginasPorNumero.get(pagina) ?? []));
   }
 
   return {
