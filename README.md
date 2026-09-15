@@ -13,7 +13,16 @@ operadora). Ver detalhes da API em [`docs/api-sti.md`](docs/api-sti.md).
       julho/2026): 3 páginas reais buscadas e agregadas corretamente,
       schema de resposta validado. Ver [`docs/api-sti.md`](docs/api-sti.md)
       para os detalhes do schema confirmado.
-- [ ] Painéis (visão geral / filtro por operadora) — próxima etapa, no Lovable
+- [x] **Recursos de dashboard confirmados** (2026-09-15, cliente HCL,
+      julho/2026): `previsto`, `recebido`, `fichasNovas`, `fichasRec`,
+      `turmaOperador`, `mensageiroResumo`, `tipoPagamento`, `dia`,
+      `operadoresAtivos`, `mensageirosAtivos` — todos testados contra a API
+      real (`src/apiClient.js#fetchDashboardResource`), token agora enviado
+      via header `X-API-Token` (recomendado pela doc oficial).
+- [x] Script de amostragem (`scripts/sample-databases.js` / `npm run sample`)
+      — busca até 100 linhas de cada um dos 11 "bancos" (doações + 10
+      recursos de dashboard) para inspeção de schema.
+- [ ] Painéis (visão geral / filtro por operadora / gráficos) — próxima etapa
 
 ## Instalação
 
@@ -45,6 +54,10 @@ npm run fetch -- --cliente=HCL --inicio=2026-07-01 --fim=2026-07-31
 
 # Para limitar a poucas páginas num teste rápido (evita baixar tudo):
 npm run fetch -- --cliente=HCL --inicio=2026-07-01 --fim=2026-07-31 --maxPages=3
+
+# 3. Buscar uma amostra (até 100 linhas, todos os campos) de cada um dos 11
+#    "bancos" (doações + 10 recursos de dashboard) — útil para conferir schema:
+npm run sample -- --cliente=HCL --inicio=2026-07-01 --fim=2026-07-31
 ```
 
 Se rodar num ambiente sandboxed com proxy de saída obrigatório e receber
@@ -73,6 +86,7 @@ src/
 scripts/
   inspect.js     # imprime a resposta bruta da API (para confirmar schema)
   fetch-client.js# busca todas as páginas de um cliente/período e salva em output/
+  sample-databases.js # busca até 100 linhas de cada "banco" (doações + recursos de dashboard)
 test/
   apiClient.test.js
 docs/
@@ -85,12 +99,20 @@ output/
 
 ## Próximos passos
 
-Com o schema já confirmado, a ideia é levar esta lógica de integração para o
-Lovable (KairOS), tipicamente como uma edge function que sincroniza os dados
-para uma tabela (Supabase) usada pelos painéis de:
+Com o schema de todos os "bancos" já confirmado (doações + 10 recursos de
+dashboard, ver [`docs/api-sti.md`](docs/api-sti.md)), a ideia é levar esta
+lógica de integração para o KairOS (Lovable ou front-end dedicado) e montar
+um painel com:
 
-1. **Visão geral** — resultados consolidados de todos os clientes/operações.
-2. **Análise por operadora** — mesmos dados filtráveis pelo campo `operador`
-   (código da operadora/telefonista, confirmado no schema real).
+1. **Filtros no topo** — por período (data de vencimento/baixa), operadora
+   (`turmaOperador`/`operador`) e tipo (quantidade x valor).
+2. **Resumo** — previsto x realizado (`previsto`/`recebido`), em valor e
+   quantidade, + fichas novas (`fichasNovas`).
+3. **Gráfico de linha mês a mês** — previsto x realizado no período
+   selecionado (base: recurso `dia`, agregado por mês no cliente).
+4. **Gráfico de fichas novas** — base: recurso `fichasNovas` por período.
+5. **Lista de doadores e suas doações** — dá para montar direto da consulta
+   de doações paginada (não precisa de recurso separado).
 
-Esses painéis serão tratados em uma etapa seguinte.
+Possível sincronização periódica para uma tabela no Supabase, para os
+painéis lerem dados já agregados em vez de chamar a API a cada acesso.

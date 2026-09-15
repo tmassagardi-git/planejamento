@@ -10,6 +10,7 @@
   "scripts": {
     "test": "node --test",
     "inspect": "node scripts/inspect.js",
-    "fetch": "node scripts/fetch-client.js"
+    "fetch": "node scripts/fetch-client.js",
+    "sample": "node scripts/sample-databases.js"
   }
 }

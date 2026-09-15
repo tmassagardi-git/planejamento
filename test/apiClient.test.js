@@ -5,6 +5,8 @@ import {
   parseApiResponse,
   fetchPage,
   fetchAllRecords,
+  fetchDashboardResource,
+  DASHBOARD_RESOURCES,
   ApiStiError,
   REQUIRED_LIMITE,
 } from '../src/apiClient.js';
@@ -196,4 +198,94 @@ test('fetchAllRecords tenta novamente em erro 5xx transitório e depois segue', 
 
   assert.equal(attempts, 2);
   assert.equal(result.records.length, 1);
+});
+
+test('fetchPage envia o token no header X-API-Token em vez da query string', async () => {
+  let receivedHeaders;
+  let receivedUrl;
+  const fetchImpl = async (url, opts) => {
+    receivedUrl = url;
+    receivedHeaders = opts?.headers;
+    return jsonResponse(200, { dados: [], total_paginas: 1 });
+  };
+
+  await fetchPage({
+    baseUrl: 'https://example.com/',
+    token: 'segredo123',
+    codigoCliente: 'HCL',
+    pagina: 1,
+    fetchImpl,
+  });
+
+  assert.equal(receivedHeaders['X-API-Token'], 'segredo123');
+  assert.equal(new URL(receivedUrl).searchParams.has('token'), false);
+});
+
+test('DASHBOARD_RESOURCES lista os 10 recursos de dashboard confirmados na documentação', () => {
+  assert.deepEqual(DASHBOARD_RESOURCES, [
+    'previsto',
+    'recebido',
+    'fichasNovas',
+    'fichasRec',
+    'turmaOperador',
+    'mensageiroResumo',
+    'tipoPagamento',
+    'dia',
+    'operadoresAtivos',
+    'mensageirosAtivos',
+  ]);
+});
+
+test('fetchDashboardResource monta a URL com recurso/data_ini/data_fim e não pagina', async () => {
+  let receivedUrl;
+  const fetchImpl = async (url) => {
+    receivedUrl = url;
+    return jsonResponse(200, {
+      status: true,
+      recurso: 'recebido',
+      total: 1,
+      dados: [{ valor_recebido: '100.00', contribuintes: 5 }],
+      periodo: { data_ini: '2026-07-01', data_fim: '2026-07-31' },
+    });
+  };
+
+  const json = await fetchDashboardResource({
+    baseUrl: 'https://example.com/',
+    token: 'tok',
+    codigoCliente: 'HCL',
+    recurso: 'recebido',
+    dataIni: '2026-07-01',
+    dataFim: '2026-07-31',
+    fetchImpl,
+  });
+
+  const parsed = new URL(receivedUrl);
+  assert.equal(parsed.searchParams.get('recurso'), 'recebido');
+  assert.equal(parsed.searchParams.get('data_ini'), '2026-07-01');
+  assert.equal(parsed.searchParams.get('data_fim'), '2026-07-31');
+  assert.equal(parsed.searchParams.has('pagina'), false);
+  assert.deepEqual(json.dados, [{ valor_recebido: '100.00', contribuintes: 5 }]);
+});
+
+test('fetchDashboardResource lança ApiStiError em erro de negócio (status:false)', async () => {
+  const fetchImpl = async () =>
+    jsonResponse(400, { status: false, mensagem: 'intervalo maior que 366 dias', dados: [] });
+
+  await assert.rejects(
+    () =>
+      fetchDashboardResource({
+        baseUrl: 'https://example.com/',
+        token: 'tok',
+        codigoCliente: 'HCL',
+        recurso: 'dia',
+        dataIni: '2020-01-01',
+        dataFim: '2026-07-31',
+        fetchImpl,
+      }),
+    (err) => {
+      assert.ok(err instanceof ApiStiError);
+      assert.match(err.message, /366 dias/);
+      return true;
+    }
+  );
 });

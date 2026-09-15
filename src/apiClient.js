@@ -59,6 +59,21 @@ export function buildQueryUrl(baseUrl, params) {
   return url.toString();
 }
 
+// Recursos de dashboard confirmados na documentação real da API (não paginados,
+// exigem codigo_cliente + data_ini + data_fim, intervalo máximo de 366 dias).
+export const DASHBOARD_RESOURCES = [
+  'previsto',
+  'recebido',
+  'fichasNovas',
+  'fichasRec',
+  'turmaOperador',
+  'mensageiroResumo',
+  'tipoPagamento',
+  'dia',
+  'operadoresAtivos',
+  'mensageirosAtivos',
+];
+
 function pickFirstArray(json, candidates) {
   if (Array.isArray(json)) return json;
   if (json && typeof json === 'object') {
@@ -103,32 +118,20 @@ export function parseApiResponse(json) {
   };
 }
 
-async function requestPageRaw({
-  baseUrl,
-  token,
-  codigoCliente,
-  vencimentoIni,
-  vencimentoFim,
-  pagina,
-  limite,
-  fetchImpl = fetch,
-  timeoutMs = 20000,
-}) {
-  const url = buildQueryUrl(baseUrl, {
-    codigo_cliente: codigoCliente,
-    token,
-    vencimento_ini: vencimentoIni,
-    vencimento_fim: vencimentoFim,
-    pagina,
-    limite,
-  });
-
+// Chamada HTTP de baixo nível, comum às consultas paginadas de doações e aos
+// recursos de dashboard. O token vai preferencialmente no header X-API-Token
+// (recomendado pela documentação real da API — evita o token aparecer em
+// históricos/logs de proxy, ao contrário de mandá-lo na query string).
+async function requestRaw({ url, token, label, fetchImpl = fetch, timeoutMs = 20000 }) {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), timeoutMs);
 
   let response;
   try {
-    response = await fetchImpl(url, { signal: controller.signal });
+    response = await fetchImpl(url, {
+      signal: controller.signal,
+      headers: token ? { 'X-API-Token': token } : undefined,
+    });
   } catch (err) {
     throw new ApiStiError(`Falha de rede ao chamar a API: ${err.message}`, { cause: err });
   } finally {
@@ -148,14 +151,14 @@ async function requestPageRaw({
   // acompanhado de HTTP 400 — priorizamos a mensagem da API por ser mais
   // descritiva do que o status HTTP genérico.
   if (json && typeof json === 'object' && json.status === false) {
-    throw new ApiStiError(json.mensagem || `API retornou status:false (pagina=${pagina})`, {
+    throw new ApiStiError(json.mensagem || `API retornou status:false (${label})`, {
       status: response.status,
       body: text,
     });
   }
 
   if (!response.ok) {
-    throw new ApiStiError(`API respondeu HTTP ${response.status} para pagina=${pagina}`, {
+    throw new ApiStiError(`API respondeu HTTP ${response.status} para ${label}`, {
       status: response.status,
       body: text,
     });
@@ -163,12 +166,36 @@ async function requestPageRaw({
 
   if (json === null) {
     throw new ApiStiError(
-      `Resposta da API não é um JSON válido (pagina=${pagina}). Verifique token/codigo_cliente/parâmetros.`,
+      `Resposta da API não é um JSON válido (${label}). Verifique token/codigo_cliente/parâmetros.`,
       { body: text }
     );
   }
 
   return json;
+}
+
+async function requestPageRaw({
+  baseUrl,
+  token,
+  codigoCliente,
+  vencimentoIni,
+  vencimentoFim,
+  pagina,
+  limite,
+  fetchImpl,
+  timeoutMs,
+  filtros,
+}) {
+  const url = buildQueryUrl(baseUrl, {
+    codigo_cliente: codigoCliente,
+    vencimento_ini: vencimentoIni,
+    vencimento_fim: vencimentoFim,
+    pagina,
+    limite,
+    ...filtros,
+  });
+
+  return requestRaw({ url, token, label: `pagina=${pagina}`, fetchImpl, timeoutMs });
 }
 
 /**
@@ -177,6 +204,36 @@ async function requestPageRaw({
 export async function fetchPage(options) {
   const json = await requestPageRaw(options);
   return parseApiResponse(json);
+}
+
+/**
+ * Busca um recurso de dashboard (não paginado): previsto, recebido, fichasNovas,
+ * fichasRec, turmaOperador, mensageiroResumo, tipoPagamento, dia,
+ * operadoresAtivos, mensageirosAtivos, ou "dashboard" (todos de uma vez).
+ *
+ * Exige codigo_cliente + data_ini + data_fim (intervalo máximo de 366 dias,
+ * conforme documentação). Retorna o JSON bruto da API (a chave `dados` é um
+ * objeto para "dashboard", um array para recursos agrupados como
+ * `turmaOperador`/`tipoPagamento`/`dia`, ou um array de 1 item para os demais).
+ */
+export async function fetchDashboardResource({
+  baseUrl,
+  token,
+  codigoCliente,
+  recurso,
+  dataIni,
+  dataFim,
+  fetchImpl,
+  timeoutMs = 30000,
+}) {
+  const url = buildQueryUrl(baseUrl, {
+    recurso,
+    codigo_cliente: codigoCliente,
+    data_ini: dataIni,
+    data_fim: dataFim,
+  });
+
+  return requestRaw({ url, token, label: `recurso=${recurso}`, fetchImpl, timeoutMs });
 }
 
 async function sleep(ms) {
@@ -224,12 +281,13 @@ export async function fetchAllRecords({
   delayMs = 150,
   fetchImpl,
   onPage,
+  filtros,
 }) {
   if (limite !== REQUIRED_LIMITE) {
     throw new ApiStiError(`A API exige limite=${REQUIRED_LIMITE} (recebido: ${limite}).`);
   }
 
-  const requestOptions = { baseUrl, token, codigoCliente, vencimentoIni, vencimentoFim, limite, fetchImpl };
+  const requestOptions = { baseUrl, token, codigoCliente, vencimentoIni, vencimentoFim, limite, fetchImpl, filtros };
 
   const firstPage = await withRetry(() => fetchPage({ ...requestOptions, pagina: 1 }));
 
