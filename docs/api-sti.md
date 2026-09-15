@@ -21,16 +21,52 @@ usada para alimentar os painéis do KairOS.
 |-------------------|------------------------|---------------------------------------------|
 | `codigo_cliente`  | `HCL`                  | Código do cliente                            |
 | `token`           | `72f9cf2d...`          | Token de acesso do cliente                   |
-| `vencimento_ini`  | `2026-07-01`           | Início do período de vencimento              |
-| `vencimento_fim`  | `2026-07-31`           | Fim do período de vencimento                 |
-| `pagina`          | `1`                    | Página atual (1-based)                       |
-| `limite`          | `1000`                 | Registros por página                         |
+| `recurso`         | `dashboard`            | Recurso consultado (ver seção abaixo) — omitido, o default é a listagem detalhada de doações |
+| `vencimento_ini`  | `2026-07-01`           | Início do período de vencimento (recurso padrão/`doacoes`) |
+| `vencimento_fim`  | `2026-07-31`           | Fim do período de vencimento (recurso padrão/`doacoes`) |
+| `data_ini`        | `2026-07-01`           | Início do período de **pagamento/baixa** (recursos `dashboard`, `recebido`, `previsto`) |
+| `data_fim`        | `2026-07-31`           | Fim do período de pagamento/baixa (idem)     |
+| `pagina`          | `1`                    | Página atual (1-based) — só se aplica à listagem detalhada |
+| `limite`          | `1000`                 | Registros por página — idem                 |
 
 Exemplo (busca vencimentos de julho/2026 do cliente HCL):
 
 ```
 https://tele.ongrentavel.com.br/scriptcase/app/ApiSTI/blank/?codigo_cliente=HCL&token=SEU_TOKEN&vencimento_ini=2026-07-01&vencimento_fim=2026-07-31&pagina=1&limite=1000
 ```
+
+## Outros recursos (`recurso=...`)
+
+Além da listagem detalhada de doações (default, sem `recurso` ou `recurso=doacoes`,
+filtrada por `vencimento_ini`/`vencimento_fim` e paginada), a API expõe recursos de
+totais já agregados para um intervalo, filtrados por `data_ini`/`data_fim`
+(data de **pagamento/baixa**, não de vencimento) e sem paginação:
+
+- `recurso=dashboard` — retorna num único JSON: previsto (valor + contribuintes),
+  recebido (valor + contribuintes), fichas novas, fichas recuperadas, recebido por
+  operador/turma, por tipo de pagamento, por dia, e resumo de mensageiros/operadores
+  ativos. **Em produção desde 2026-09-14** (KairOS/Lovable, `tlm-dashboard-sync.server.ts`),
+  sincronizado mês a mês para as tabelas `tlm_dash_*`. Ver
+  `.lovable/plan/integração-api-hcl-usar-os-endpoints-de-totais-dashboard-2026-09-14.md`
+  no projeto Lovable para o plano completo.
+- `recurso=recebido` — só o valor recebido no intervalo (subconjunto do que
+  `dashboard` já traz).
+- `recurso=previsto` — só o valor previsto no intervalo.
+
+Exemplo (recebido em julho/2026, cliente HCL):
+
+```
+https://tele.ongrentavel.com.br/scriptcase/app/ApiSTI/blank/?codigo_cliente=HCL&token=SEU_TOKEN&data_ini=2026-07-01&data_fim=2026-07-31&recurso=recebido
+```
+
+⚠️ **Cuidado ao comparar `previsto` com relatórios do próprio sistema do cliente**:
+confirmado em produção (2026-09-15, HCL, janeiro/2026) que o `previsto` de
+`recurso=dashboard` (títulos com vencimento no período, pagos + em aberto, contando
+**contribuintes** distintos) não bate com a coluna "emitido" do relatório 481 do
+cliente, que aparentemente conta **títulos/boletos** (não doadores) e usa um recorte
+diferente. O valor `recebido`/pago bateu exatamente entre as duas fontes; só previsto
+e as quantidades de doadores/títulos divergem. Antes de exibir "previsto" num painel,
+confirmar com o cliente qual definição eles esperam.
 
 ## Paginação
 

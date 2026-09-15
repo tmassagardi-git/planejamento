@@ -13,7 +13,10 @@ operadora). Ver detalhes da API em [`docs/api-sti.md`](docs/api-sti.md).
       julho/2026): 3 páginas reais buscadas e agregadas corretamente,
       schema de resposta validado. Ver [`docs/api-sti.md`](docs/api-sti.md)
       para os detalhes do schema confirmado.
-- [ ] Painéis (visão geral / filtro por operadora) — próxima etapa, no Lovable
+- [x] Painéis em produção no Lovable (KairOS Monitor → Telemarketing → Integração API):
+      `Painel` (totais oficiais `recurso=dashboard`) e `Integração 2` (previsto x
+      realizado mês a mês, fichas novas, filtro por operadora/tipo). Lista de
+      doadores por doação sendo adicionada na Integração 2 (2026-09-15).
 
 ## Instalação
 
