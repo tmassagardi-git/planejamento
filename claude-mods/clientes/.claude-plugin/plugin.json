@@ -1,0 +1,6 @@
+{
+  "name": "clientes",
+  "version": "0.1.0",
+  "description": "Painel lateral que separa seus pedidos por cliente",
+  "types": "./types/index.d.ts"
+}
