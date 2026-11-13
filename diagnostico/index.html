@@ -1,0 +1,582 @@
+<title>Diagnóstico de Maturidade Everest</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Inter:wght@400;500;600&display=swap">
+<style>
+/* Layout: ferramenta em 4 telas (Início, Questionário, Números, Resultado) com barra fixa no topo;
+   conteúdo em coluna única de até 1120px; painéis brancos só onde há um objeto (gráfico, pergunta, tabela). */
+:root{
+  --bg:#f2f6f5; --surface:#ffffff; --surface-2:#e7eeec; --ink:#0f2420; --ink-2:#465a55; --muted:#74857f; --line:#d3dedb;
+  --accent:#0b6b5d; --accent-ink:#ffffff; --accent-soft:#d8ebe6;
+  --s1:#2a78d6; --s2:#eb6834; --s3:#1baf7a; --s4:#eda100; --s5:#e87ba4; --s6:#6250d6;
+  --good:#1f7a4d; --warn:#a8690a; --crit:#b93a32;
+  --lv1:#b9d9d2; --lv2:#7dbcaf; --lv3:#3a9483; --lv4:#0b6b5d;
+  --display:"Bricolage Grotesque","Inter",system-ui,sans-serif; --body:"Inter",system-ui,-apple-system,"Segoe UI",sans-serif;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --bg:#0d1615; --surface:#152120; --surface-2:#1d2c2a; --ink:#e8f0ee; --ink-2:#b4c5c0; --muted:#8a9c96; --line:#2a3c39;
+  --accent:#4fc2ad; --accent-ink:#06211c; --accent-soft:#173f39;
+  --s1:#3987e5; --s2:#d95926; --s3:#199e70; --s4:#c98500; --s5:#d55181; --s6:#9085e9;
+  --good:#55c08a; --warn:#e0a84a; --crit:#ee7b72;
+  --lv1:#24524b; --lv2:#2f7d70; --lv3:#3fa794; --lv4:#63d4bf; color-scheme:dark } }
+:root[data-theme="dark"]{
+  --bg:#0d1615; --surface:#152120; --surface-2:#1d2c2a; --ink:#e8f0ee; --ink-2:#b4c5c0; --muted:#8a9c96; --line:#2a3c39;
+  --accent:#4fc2ad; --accent-ink:#06211c; --accent-soft:#173f39;
+  --s1:#3987e5; --s2:#d95926; --s3:#199e70; --s4:#c98500; --s5:#d55181; --s6:#9085e9;
+  --good:#55c08a; --warn:#e0a84a; --crit:#ee7b72;
+  --lv1:#24524b; --lv2:#2f7d70; --lv3:#3fa794; --lv4:#63d4bf; color-scheme:dark }
+
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font:400 15px/1.55 var(--body)}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--surface)}
+h1,h2,h3{font-family:var(--display);text-wrap:balance;margin:0;line-height:1.15;letter-spacing:-.01em}
+h1{font-size:clamp(28px,4.5vw,42px);font-weight:700}
+h2{font-size:22px;font-weight:700}
+h3{font-size:16px;font-weight:700}
+p{margin:0}
+.num{font-variant-numeric:tabular-nums}
+.muted{color:var(--muted)} .sub{color:var(--ink-2)}
+.eyebrow{font-size:11.5px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:var(--muted)}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:9;background:var(--surface);border-bottom:1px solid var(--line)}
+.wrap{max-width:1120px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.top .wrap{display:flex;align-items:center;gap:20px;flex-wrap:wrap;padding-block:10px}
+.brand{display:flex;align-items:center;gap:10px;font-family:var(--display);font-weight:700;font-size:16px}
+.brand svg{flex:none}
+.nav{display:flex;gap:4px;overflow-x:auto;min-width:0;margin-left:auto}
+.nav a{padding:7px 12px;border-radius:999px;color:var(--ink-2);text-decoration:none;font-weight:500;font-size:14px;white-space:nowrap}
+.nav a:hover{background:var(--surface-2)}
+.nav a[aria-current="page"]{background:var(--accent);color:var(--accent-ink)}
+main.wrap{padding-block:28px 64px;display:flex;flex-direction:column;gap:28px}
+
+.banner{display:flex;gap:12px;align-items:center;flex-wrap:wrap;background:var(--accent-soft);border:1px solid var(--line);border-radius:10px;padding:10px 14px;font-size:14px}
+.banner p{flex:1;min-width:220px}
+.btn{font:600 14px var(--body);border-radius:8px;border:1px solid var(--line);background:var(--surface);color:var(--ink);padding:9px 16px;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;gap:8px}
+.btn:hover{border-color:var(--accent)}
+.btn.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.btn.small{padding:6px 11px;font-size:13px}
+.row{display:flex;gap:12px;flex-wrap:wrap;align-items:center}
+.spread{justify-content:space-between}
+
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:20px;min-width:0}
+.panel > h3{margin-bottom:4px}
+.panel > .sub{font-size:13.5px;margin-bottom:14px}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,420px),1fr));gap:20px}
+.stack{display:flex;flex-direction:column;gap:14px}
+.sec{display:flex;flex-direction:column;gap:16px}
+.sec > header{display:flex;flex-direction:column;gap:4px;max-width:70ch}
+
+/* início */
+.hero{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);gap:28px;align-items:center}
+.hero p.lead{font-size:17px;color:var(--ink-2);max-width:56ch;margin-block:14px 20px}
+.steps{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:2px;counter-reset:s}
+.steps li{counter-increment:s;display:grid;grid-template-columns:34px 1fr;gap:12px;padding:12px 0;border-top:1px solid var(--line)}
+.steps li::before{content:counter(s);font:700 20px var(--display);color:var(--accent)}
+.steps b{display:block}
+.steps span{color:var(--ink-2);font-size:14px}
+.fields{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,220px),1fr));gap:14px}
+label.f{display:flex;flex-direction:column;gap:5px;font-size:13px;font-weight:500;color:var(--ink-2)}
+input[type=text],select,textarea{font:400 14px var(--body);color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:9px 10px;width:100%;min-width:0}
+input[type=text]:hover,select:hover{border-color:var(--muted)}
+textarea{min-height:90px;font-family:ui-monospace,Menlo,monospace;font-size:12px}
+
+/* questionário */
+.qlayout{display:grid;grid-template-columns:250px minmax(0,1fr);gap:24px;align-items:start}
+.dimnav{display:flex;flex-direction:column;gap:4px;position:sticky;top:calc(env(safe-area-inset-top,0px) + 70px)}
+.dimnav button{font:500 14px var(--body);text-align:left;background:none;border:0;border-radius:8px;padding:9px 10px;color:var(--ink-2);cursor:pointer;display:flex;justify-content:space-between;gap:8px;align-items:center}
+.dimnav button:hover{background:var(--surface-2)}
+.dimnav button[aria-current="true"]{background:var(--surface);color:var(--ink);box-shadow:inset 0 0 0 1px var(--line);font-weight:600}
+.count{font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums;white-space:nowrap}
+.count.done{color:var(--good);font-weight:600}
+fieldset.q{border:1px solid var(--line);background:var(--surface);border-radius:12px;padding:16px 18px;margin:0;min-width:0}
+fieldset.q legend{font-weight:600;font-size:15px;padding:0 4px;float:left;width:100%;margin-bottom:10px}
+fieldset.q .hint{clear:both;font-size:12.5px;color:var(--muted);margin-bottom:8px}
+.opts{clear:both;display:flex;flex-direction:column;gap:6px}
+.opt{display:flex;gap:10px;align-items:flex-start;padding:8px 10px;border:1px solid var(--line);border-radius:8px;cursor:pointer;font-size:14px}
+.opt:hover{border-color:var(--muted)}
+.opt:has(input:checked){border-color:var(--accent);background:var(--accent-soft)}
+.opt input{accent-color:var(--accent);margin-top:3px;flex:none}
+
+/* números */
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{font:500 13px var(--body);border:1px solid var(--line);background:var(--surface);color:var(--ink-2);border-radius:999px;padding:5px 11px;cursor:pointer}
+.chip[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.fonte-group{display:grid;grid-template-columns:150px 1fr;gap:10px;align-items:start;padding:8px 0;border-top:1px solid var(--line)}
+.fonte-group > span{font-size:13px;font-weight:600;display:flex;gap:7px;align-items:center;padding-top:5px}
+.dot{width:10px;height:10px;border-radius:3px;flex:none;display:inline-block}
+.scroll{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:13.5px}
+th,td{padding:7px 8px;text-align:left;border-bottom:1px solid var(--line);vertical-align:middle}
+th{font-size:11.5px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);white-space:nowrap}
+td.r,th.r{text-align:right}
+table.grid td{padding:3px}
+table.grid td:first-child,table.grid th:first-child{position:sticky;left:0;background:var(--surface);min-width:150px;padding:6px 8px;font-weight:500;z-index:1}
+table.grid input{width:86px;text-align:right;padding:6px 7px;font-variant-numeric:tabular-nums}
+table.cfg select{min-width:130px} table.cfg input{min-width:120px;text-align:right}
+.tabs{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.tabs button{font:600 13px var(--body);border:0;background:var(--surface);color:var(--ink-2);padding:7px 14px;cursor:pointer}
+.tabs button[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink)}
+
+/* resultado */
+.score{display:grid;grid-template-columns:auto minmax(0,1fr);gap:28px;align-items:center}
+.big{font:700 clamp(56px,9vw,84px)/.95 var(--display);letter-spacing:-.03em}
+.big small{font-size:.32em;color:var(--muted);font-weight:500;letter-spacing:0}
+.ladder{display:grid;grid-template-columns:repeat(4,1fr);gap:3px;margin-top:14px}
+.ladder div{font-size:12px;color:var(--muted);padding-top:7px;border-top:6px solid var(--surface-2)}
+.ladder div.on{color:var(--ink);font-weight:600}
+.pill{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600;border:1px solid var(--line);border-radius:999px;padding:2px 9px;white-space:nowrap;background:var(--surface)}
+.pill i{width:8px;height:8px;border-radius:50%;display:inline-block}
+.dimrow{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 12px;padding:9px 0;border-top:1px solid var(--line);align-items:center}
+.dimrow:first-child{border-top:0}
+.track{grid-column:1/-1;height:8px;border-radius:4px;background:var(--surface-2);position:relative}
+.track b{position:absolute;inset:0 auto 0 0;border-radius:4px}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,165px),1fr));gap:12px}
+.kpi{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px 16px;display:flex;flex-direction:column;gap:3px}
+.kpi .v{font:700 24px var(--display);font-variant-numeric:tabular-nums}
+.kpi .l{font-size:12.5px;color:var(--ink-2)}
+.kpi .n{font-size:12px;color:var(--muted)}
+.st{font-weight:600;font-size:12.5px;white-space:nowrap}
+.st.good{color:var(--good)} .st.warn{color:var(--warn)} .st.crit{color:var(--crit)}
+.chartbox{position:relative;height:320px}
+.chartbox.radar{height:380px}
+.bar{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:3px 10px;padding:9px 0;border-top:1px solid var(--line);font-size:13.5px}
+.bar:first-of-type{border-top:0}
+.bar .track{height:12px;border-radius:3px}
+.bar .track b{border-radius:3px}
+.bar .tick{position:absolute;top:-4px;bottom:-4px;width:2px;background:var(--ink)}
+.bar .note{grid-column:1/-1;font-size:12.5px;color:var(--ink-2)}
+.legend{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:12.5px;color:var(--ink-2);margin-bottom:8px}
+.legend span{display:inline-flex;gap:6px;align-items:center}
+.find{list-style:none;margin:0;padding:0;display:flex;flex-direction:column}
+.find li{padding:10px 0;border-top:1px solid var(--line);font-size:14px;display:grid;grid-template-columns:20px 1fr;gap:8px}
+.find li:first-child{border-top:0}
+.find li::before{font-weight:700}
+.find.good li::before{content:"✓";color:var(--good)}
+.find.warn li::before{content:"!";color:var(--warn)}
+.find.next li{counter-increment:n}
+.find.next{counter-reset:n}
+.find.next li::before{content:counter(n);color:var(--accent);font-family:var(--display)}
+details{border-top:1px solid var(--line)}
+details summary{cursor:pointer;padding:12px 0;display:flex;justify-content:space-between;gap:12px;align-items:center;font-weight:600;list-style:none}
+details summary::-webkit-details-marker{display:none}
+details .inner{padding:0 0 14px;display:flex;flex-direction:column;gap:10px;font-size:14px}
+.qa{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2px 12px}
+.qa .a{grid-column:1/-1;color:var(--ink-2);font-size:13.5px}
+.qa .rec{grid-column:1/-1;font-size:13.5px;border-left:3px solid var(--accent);padding-left:10px;margin-top:3px}
+.empty{padding:28px;text-align:center;color:var(--muted);border:1px dashed var(--line);border-radius:12px}
+
+@media (max-width:820px){
+  .hero,.qlayout,.score{grid-template-columns:minmax(0,1fr)}
+  .dimnav{position:static;flex-direction:row;overflow-x:auto;padding-bottom:4px}
+  .dimnav button{white-space:nowrap;flex:none;border:1px solid var(--line)}
+  .fonte-group{grid-template-columns:1fr}
+  .nav{margin-left:0;width:100%}
+}
+@media (prefers-reduced-motion:no-preference){ .track b{transition:width .4s ease} }
+</style>
+
+<div class="top"><div class="wrap">
+  <div class="brand">
+    <svg width="26" height="26" viewBox="0 0 26 26" aria-hidden="true"><path d="M2 22 L10 7 L14 14 L17 10 L24 22 Z" style="fill:var(--accent)"/><path d="M10 7 L12.2 10.9 L10.4 12.4 L8.2 10.4 Z" style="fill:var(--surface)"/></svg>
+    <span>Diagnóstico de Maturidade</span>
+  </div>
+  <nav class="nav" id="nav" aria-label="Etapas">
+    <a href="#inicio">Início</a><a href="#questionario">Questionário</a><a href="#numeros">Números da captação</a><a href="#resultado">Resultado</a>
+  </nav>
+</div></div>
+<main class="wrap" id="app"></main>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script>
+/* ============ MODELO: dimensões, perguntas, estratégias ============ */
+const NIVEIS=[
+ {n:'Básico',min:0,d:'Captação pontual e dependente de poucas fontes, sem metas nem processos estruturados.'},
+ {n:'Intermediário',min:40,d:'Diversificação inicial, metas anuais básicas e primeiros controles implantados.'},
+ {n:'Avançado',min:65,d:'Estratégia estruturada, equipe dedicada e gestão ativa do relacionamento.'},
+ {n:'Excelência',min:85,d:'Base sólida de doadores, receita previsível, reservas e cultura de captação consolidada.'}];
+const nivel=s=>s>=85?3:s>=65?2:s>=40?1:0;
+
+const DIMS=[
+{id:'cap',nome:'Captação de recursos',curto:'Captação',desc:'Plano, metas, diversificação de fontes e processo de prospecção.',qs:[
+ {id:'c1',t:'A organização possui um plano de captação de recursos?',o:[['Sim, formalizado, com metas e revisão periódica',3],['Sim, formalizado, mas pouco usado no dia a dia',2],['Informal, está na cabeça da liderança',1],['Não possui',0]],rec:'Montar o plano de captação: diagnóstico, objetivos, escolha das estratégias, metas e indicadores, equipe, cronograma, orçamento e plano de ação (5W2H).'},
+ {id:'c2',t:'Como são definidas as metas de captação?',o:[['Por estratégia, com valores mensais acompanhados',3],['Uma meta anual global',2],['Metas informais, sem número ou prazo',1],['Não há metas',0]],rec:'Definir metas por estratégia com a fórmula objetivo + número + prazo e acompanhar mês a mês o valor que falta captar.'},
+ {id:'c3',t:'Quantas estratégias de captação geram resultado relevante hoje?',o:[['5 ou mais',3],['3 ou 4',2],['2',1],['Apenas 1',0]],rec:'Abrir novas estratégias de forma integrada (por exemplo, eventos gerando contatos para doação recorrente) até chegar a pelo menos 5 fontes ativas.'},
+ {id:'c4',t:'Quanto a maior fonte representa do total captado?',o:[['Até 30%',3],['De 31% a 50%',2],['De 51% a 70%',1],['Mais de 70%',0]],rec:'Aplicar a regra dos 30%: nenhuma estratégia deve responder por mais de 30% da receita. Usar metas intermediárias (50%, depois 40%) até chegar lá.'},
+ {id:'c5',t:'A organização tem fontes de recursos livres (não carimbados)?',o:[['Sim, fixas e recorrentes, cobrindo os custos institucionais',3],['Sim, fixas, mas insuficientes para os custos institucionais',2],['Apenas esporádicas',1],['Não, só capta para projetos',0]],rec:'Criar uma meta específica de recursos livres, começando por estratégias recorrentes: doadores individuais mensais, programa Empresa Amiga com pequenas e médias empresas e Nota Fiscal.'},
+ {id:'c6',t:'Como acontece a prospecção de novos doadores e parceiros?',o:[['Ativa, com funil por etapas e taxas de conversão medidas',3],['Ativa, mas sem funil ou indicadores',2],['Majoritariamente reativa, quando alguém procura a organização',1],['Não há prospecção',0]],rec:'Implantar o funil de captação (prospects, oportunidade, proposta, negócio provável, fechado) e qualificar empresas por vínculo, interesse e capacidade (matriz VIC).'},
+ {id:'c7',t:'Com que frequência o valor captado é apurado e discutido?',o:[['Semanal ou quinzenal',3],['Mensal',2],['Trimestral',1],['Só sob demanda',0]],rec:'Criar um rito mensal de resultado com previsto x recebido por estratégia e decisões registradas.'},
+ {id:'c8',t:'Que material a organização usa para apresentar oportunidades a financiadores?',o:[['Catálogo de oportunidades, cotas com contrapartidas e propostas personalizadas',3],['Apresentação institucional e proposta padrão',2],['Materiais montados caso a caso',1],['Não há material',0]],rec:'Montar o kit comercial: apresentação institucional, catálogo de oportunidades de investimento e cotas com contrapartidas escalonadas.'},
+ {id:'c9',t:'Como é possível doar pelo site?',o:[['Página de doação com poucos cliques e opção recorrente',3],['Página de doação só para doação única, ou com processo longo',2],['Apenas Pix ou dados bancários publicados',1],['Não é possível doar pelo site',0]],rec:'Publicar uma página de doação simples, com poucos cliques e foco em doação recorrente (cartão e Pix automático).'}]},
+{id:'rel',nome:'Relacionamento com doadores',curto:'Relacionamento',desc:'Base de dados, régua de relacionamento, retenção e grandes doadores.',qs:[
+ {id:'r1',t:'Onde ficam os dados dos doadores e parceiros?',o:[['Em um CRM sob domínio da organização',3],['No sistema de um fornecedor',2],['Em planilhas',1],['Em WhatsApp, cadernos e na memória das pessoas',0]],rec:'Centralizar a base em um CRM sob domínio da organização, exportando e limpando os dados que hoje estão em fornecedores e planilhas.'},
+ {id:'r2',t:'Existe uma régua de relacionamento com os doadores?',o:[['Sim, definida por público e automatizada',3],['Sim, definida, mas executada manualmente',2],['Apenas ações pontuais',1],['Não existe',0]],rec:'Desenhar a régua de relacionamento por público, do primeiro contato à renovação, e automatizar os envios.'},
+ {id:'r3',t:'Quais destas ações de relacionamento acontecem hoje?',multi:['Boas-vindas ao novo doador','Agradecimento a cada doação','Prestação de contas periódica com impacto','Mensagem em aniversário e datas comemorativas','Lembrete de vencimento','Recuperação de doadores inativos','Reconhecimento (certificado, selo, placa)'],th:[2,4,6],rec:'Completar a régua: boas-vindas, agradecimento, prestação de contas mensal com impacto quantificado, datas comemorativas e kit de recuperação de inativos.'},
+ {id:'r4',t:'Com que frequência a organização fala com doadores e patrocinadores?',o:[['Contato frequente e planejado',3],['Só na entrega de relatórios',2],['Só quando o doador procura',1],['Não há contato estruturado',0]],rec:'Planejar contatos que não sejam pedidos: captação se baseia em relacionamento, não apenas em transações.'},
+ {id:'r5',t:'Os doadores são segmentados?',o:[['Sim, por valor, recência e perfil, com abordagens diferentes',3],['Separamos apenas grandes e pequenos doadores',2],['Todos recebem a mesma comunicação',1],['Não conhecemos o perfil dos doadores',0]],rec:'Segmentar a base: automação e escala para pequenos doadores, atendimento personalizado para médios e grandes.'},
+ {id:'r6',t:'A organização mede retenção e perda de doadores?',o:[['Sim, todo mês, e age sobre os resultados',3],['Mede de vez em quando',2],['Só percebe quando a arrecadação cai',1],['Não mede',0]],rec:'Medir mensalmente retenção, perda de doadores e inadimplência, com meta de recebimento de 90% do previsto.'},
+ {id:'r7',t:'Há campanhas de recuperação de inativos e de aumento do valor doado?',o:[['Sim, as duas, de forma regular',3],['Apenas uma delas',2],['Já foi feito pontualmente',1],['Nunca',0]],rec:'Rodar campanhas regulares de recuperação (inativos há mais de 6 meses) e de aumento de valor nas faixas mais baixas.'},
+ {id:'r8',t:'Como a organização trabalha grandes doadores?',o:[['Carteira segmentada, com plano de cultivo e responsável definido',3],['Estão identificados, mas sem plano de cultivo',2],['Relacionamento informal, só da liderança',1],['Não identifica grandes doadores',0]],rec:'Criar a carteira de grandes doadores com critério de classificação, histórico de relacionamento e plano de cultivo e solicitação.'}]},
+{id:'com',nome:'Comunicação',curto:'Comunicação',desc:'Planejamento, canais, conteúdo, marca e prestação de contas.',qs:[
+ {id:'m1',t:'Existe um planejamento de comunicação?',o:[['Plano anual integrado à captação, com métricas',3],['Plano anual, sem integração com a captação',2],['Ações conforme a demanda',1],['Não existe',0]],rec:'Elaborar o plano anual de comunicação junto com o calendário de captação, com métricas de engajamento.'},
+ {id:'m2',t:'Como está o site institucional?',o:[['Atualizado, com área de transparência e de doação',3],['Atualizado',2],['Desatualizado',1],['Não possui site',0]],rec:'Atualizar o site com área de transparência (estatuto, balanços, relatórios) e caminho claro para doar.'},
+ {id:'m3',t:'Com que frequência a organização publica nas redes sociais?',o:[['Diariamente',3],['2 a 3 vezes por semana',2],['1 vez por semana',1],['Sem periodicidade, ou não está presente',0]],rec:'Definir um calendário editorial com frequência mínima de 2 a 3 publicações por semana.'},
+ {id:'m4',t:'Que tipos de conteúdo a organização divulga?',multi:['Causa e conteúdo institucional','Projetos e atividades','Resultados e impacto','Campanhas de captação','Reconhecimento de doadores e patrocinadores','Histórias de pessoas atendidas','Eventos'],th:[2,4,6],rec:'Equilibrar o conteúdo: além de atividades, publicar resultados e impacto, histórias de atendidos e reconhecimento de quem apoia.'},
+ {id:'m5',t:'Como comunicação e captação trabalham juntas?',o:[['Mesma coordenação (desenvolvimento institucional), com objetivos compartilhados',3],['Áreas separadas, com planejamento conjunto',2],['Áreas separadas, com pouco diálogo',1],['Não há área de comunicação',0]],rec:'Unir captação e comunicação em uma coordenação de desenvolvimento institucional, com objetivos compartilhados.'},
+ {id:'m6',t:'Como é a prestação de contas ao público?',o:[['Relatório anual e atualizações periódicas com impacto quantificado',3],['Relatório anual',2],['Só para financiadores que exigem',1],['Não há',0]],rec:'Publicar prestação de contas periódica e tangível: quanto entrou, o que foi feito e quantas pessoas foram atendidas.'},
+ {id:'m7',t:'Como estão a marca e os materiais institucionais?',o:[['Identidade consistente e kit institucional atualizado',3],['Identidade definida, materiais desatualizados',2],['Cada material tem um padrão',1],['Não há identidade visual definida',0]],rec:'Padronizar a identidade visual e atualizar o kit de apresentação institucional.'},
+ {id:'m8',t:'Como é a relação com a imprensa e a preparação para crises?',o:[['Relacionamento ativo, porta-vozes preparados e plano de crise',3],['Relacionamento eventual com a imprensa',2],['Só atende quando é procurada',1],['Não há',0]],rec:'Preparar porta-vozes, manter relacionamento com a imprensa local e redigir um plano simples de gestão de crise.'}]},
+{id:'gov',nome:'Gestão e governança',curto:'Governança',desc:'Conselhos, planejamento estratégico, transparência e políticas.',qs:[
+ {id:'g1',t:'Como estão os conselhos da organização?',o:[['Conselhos deliberativo e fiscal ativos, com regimento',3],['Conselhos ativos, sem regimento',2],['Existem apenas no papel',1],['Não possui conselhos',0]],rec:'Ativar os conselhos deliberativo e fiscal com regimento, calendário de reuniões e envio antecipado de documentos.'},
+ {id:'g2',t:'Qual o grau de participação dos conselheiros?',o:[['Atuam nas decisões estratégicas, além das reuniões ordinárias',3],['Participam das reuniões ordinárias',2],['Pouca presença',1],['As decisões são tomadas só pelo presidente ou fundador',0]],rec:'Diversificar o perfil do conselho (gestão, jurídico, captação, pessoas que abrem portas) e definir o papel esperado de cada conselheiro.'},
+ {id:'g3',t:'Como o conselho se envolve com a captação?',o:[['É pauta regular; conselheiros abrem portas, doam e há comitê de captação',3],['É pauta regular, mas com pouco envolvimento prático',2],['Envolvimento pontual',1],['Nenhum envolvimento',0]],rec:'Colocar captação como pauta fixa do conselho e criar um comitê de captação com membros externos.'},
+ {id:'g4',t:'A organização tem planejamento estratégico?',o:[['Vigente, com metas por área e conhecido por todos',3],['Vigente, mas pouco conhecido',2],['Desatualizado',1],['Não possui',0]],rec:'Revisar o planejamento estratégico com metas por área e comunicá-lo a toda a equipe.'},
+ {id:'g5',t:'Há indicadores de desempenho institucional?',o:[['Sim, acompanhados periodicamente pela liderança',3],['Sim, mas só parte é acompanhada',2],['Existem, mas não são acompanhados',1],['Não possui',0]],rec:'Definir poucos indicadores institucionais e acompanhá-los em reunião periódica da liderança.'},
+ {id:'g6',t:'Quais documentos estão publicados no site?',multi:['Estatuto','Ata de eleição da diretoria','Balanços ou DRE','Relatórios anuais','Código de conduta e políticas','Parecer de auditoria'],th:[1,3,5],rec:'Criar a área de transparência no site com estatuto, ata de eleição, balanços, relatórios anuais e políticas.'},
+ {id:'g7',t:'As contas passam por auditoria?',o:[['Auditoria externa anual',3],['Auditoria externa eventual',2],['Apenas conselho fiscal ou auditoria interna',1],['Não',0]],rec:'Contratar auditoria externa anual, de preferência especializada no terceiro setor.'},
+ {id:'g8',t:'A organização tem código de conduta e políticas internas?',o:[['Código de conduta e políticas (compras, parcerias, LGPD) divulgados',3],['Apenas código de conduta',2],['Em elaboração',1],['Não possui',0]],rec:'Formalizar código de conduta, política de parcerias e uso de marca e política de proteção de dados (LGPD).'}]},
+{id:'fin',nome:'Finanças',curto:'Finanças',desc:'Orçamento, reservas, resultado, custos institucionais e previsibilidade.',qs:[
+ {id:'f1',t:'Como é feito o orçamento?',o:[['Anual, por programa e centro de custo, aprovado e revisado',3],['Anual, global',2],['Controla apenas o caixa',1],['Não há orçamento',0]],rec:'Elaborar orçamento anual por programa e área, indicando para cada linha o que está contratado, em caixa e a captar.'},
+ {id:'f2',t:'Com que frequência o previsto é comparado ao realizado?',o:[['Todo mês, com a liderança',3],['A cada trimestre',2],['No fechamento do ano',1],['Não é comparado',0]],rec:'Instituir relatório mensal de previsto x realizado, centralizando todas as entradas de captação.'},
+ {id:'f3',t:'Quantos meses de despesas fixas o fundo de reserva cobre?',o:[['12 meses ou mais',3],['De 6 a 12 meses',2.5],['De 3 a 6 meses',2],['De 1 a 3 meses',1],['Não possui reserva',0]],rec:'Criar política de fundo de reserva: mínimo de 3 meses, ideal de 6, destinando a ela parte de cada receita livre.'},
+ {id:'f4',t:'Qual foi o resultado dos dois últimos exercícios?',o:[['Superávit nos dois',3],['Equilíbrio',2],['Déficit em um deles',1],['Déficit nos dois',0]],rec:'Arrumar a casa antes de acelerar: priorizar poucas frentes e fazer análise de viabilidade antes de novos projetos ou serviços.'},
+ {id:'f5',t:'Como são cobertos os custos institucionais (equipe administrativa, estrutura)?',o:[['Por recursos livres e taxa administrativa negociada em todos os projetos',3],['Cobertos em parte',2],['Há dificuldade frequente',1],['Os projetos não cobrem e não há recurso livre',0]],rec:'Negociar taxa administrativa em todos os projetos (referência de 25%) e usar subsídio cruzado entre projetos fáceis e difíceis de captar.'},
+ {id:'f6',t:'Quanto da receita do próximo ano já está contratado ou é recorrente?',o:[['Mais de 50%',3],['De 30% a 50%',2],['De 10% a 30%',1],['Menos de 10%',0]],rec:'Aumentar a previsibilidade com contratos plurianuais e doação recorrente, buscando iniciar o ano com 50% da receita prevista.'},
+ {id:'f7',t:'A área de captação tem orçamento próprio e mede retorno?',o:[['Sim, e mede o retorno por estratégia',3],['Tem orçamento, mas não mede retorno',2],['Os gastos ficam diluídos em outras áreas',1],['Não há investimento em captação',0]],rec:'Dar orçamento próprio à captação e medir o retorno por estratégia: cada real investido deve voltar multiplicado.'},
+ {id:'f8',t:'Qual a situação de dívidas e parcelamentos?',o:[['Sem dívidas',3],['Parcelamentos em dia, sem comprometer a operação',2],['Dívidas que pressionam o caixa',1],['Dívidas em atraso',0]],rec:'Mapear dívidas e parcelamentos, renegociar prazos e incluir a quitação no plano financeiro.'}]},
+{id:'prog',nome:'Programas e projetos',curto:'Programas',desc:'Estrutura dos projetos, indicadores, impacto e carteira para financiadores.',qs:[
+ {id:'p1',t:'Como são os projetos da organização?',o:[['Programas permanentes e recorrentes',3],['Projetos próprios, sem recorrência',2],['Criados sob demanda de editais e investidores',1],['Não há projetos estruturados',0]],rec:'Empacotar as atividades em programas permanentes, que permitem captações menores e recorrentes.'},
+ {id:'p2',t:'Os projetos estão escritos?',o:[['Todos, com detalhamento técnico e orçamento',3],['Os principais',2],['Escritos, sem detalhamento',1],['Não estão escritos',0]],rec:'Escrever os projetos com objetivos, metodologia, metas e orçamento detalhado.'},
+ {id:'p3',t:'Os projetos têm indicadores de resultado?',o:[['Todos têm, e são acompanhados',3],['Existem, mas nem sempre são apurados',2],['Apenas número de atendimentos',1],['Não têm',0]],rec:'Definir indicadores de resultado por projeto e apurá-los em intervalos fixos.'},
+ {id:'p4',t:'Como a organização acompanha seu impacto social?',o:[['Metodologia sistematizada ou avaliação externa',3],['Metodologia interna simples',2],['Percepção da equipe',1],['Não acompanha',0]],rec:'Sistematizar uma metodologia de acompanhamento de impacto, com indicadores comparáveis a referências externas.'},
+ {id:'p5',t:'A organização sabe quanto custa cada atendimento ou entrega?',o:[['Sim, e usa o valor nas propostas e campanhas',3],['Sabe, mas não usa na captação',2],['Tem apenas estimativas',1],['Não sabe',0]],rec:'Tangibilizar a doação: calcular quanto custa cada entrega e usar esse valor em campanhas e propostas.'},
+ {id:'p6',t:'Há projetos prontos para apresentar a um financiador?',o:[['Carteira atualizada, com valores e contrapartidas',3],['Alguns projetos prontos',2],['Escreve quando surge a oportunidade',1],['Não',0]],rec:'Manter uma carteira de projetos prontos, com valores e contrapartidas, para responder rápido a editais e empresas.'},
+ {id:'p7',t:'Como os projetos são avaliados e melhorados?',o:[['A cada ciclo, com indicadores e ajuste de rota',3],['Reuniões de avaliação, sem indicadores',2],['De maneira informal',1],['Não há avaliação',0]],rec:'Fazer reunião de avaliação ao fim de cada ciclo, registrando aprendizados e ajustes.'},
+ {id:'p8',t:'Os projetos estão alinhados à missão?',o:[['Totalmente',3],['Na maioria',2],['Parte foi criada para atender editais',1],['Não há alinhamento claro',0]],rec:'Revisar a carteira e encerrar ou adaptar projetos que desviam a organização da sua missão.'}]},
+{id:'eq',nome:'Equipe e desenvolvimento institucional',curto:'Equipe e DI',desc:'Estrutura da área, capacitação, ferramentas e cultura de doação.',qs:[
+ {id:'e1',t:'Quem faz a captação de recursos?',o:[['Equipe interna dedicada',3],['Um captador dedicado',2],['Pessoas que dividem o tempo com outras funções',1],['Ninguém, ou só a liderança',0]],rec:'Ter ao menos um captador interno dedicado. Referência de retorno: 3 vezes o custo para um perfil júnior, 8 a 10 vezes para um sênior.'},
+ {id:'e2',t:'Onde está o conhecimento sobre a captação?',o:[['Em processos documentados e compartilhados',3],['Dividido entre 2 ou 3 pessoas',2],['Concentrado em uma pessoa',1],['Não há conhecimento estruturado',0]],rec:'Documentar processos e contatos para que a captação não dependa de uma única pessoa.'},
+ {id:'e3',t:'A equipe de captação tem metas individuais?',o:[['Sim, com acompanhamento e reconhecimento por resultado',3],['Sim, mas sem acompanhamento',2],['Só a meta da área',1],['Não há metas',0]],rec:'Definir metas individuais e coletivas, com acompanhamento periódico e política de reconhecimento.'},
+ {id:'e4',t:'Como a equipe se capacita em captação?',o:[['Plano contínuo e participação em eventos do setor',3],['Capacitações eventuais',2],['Aprende apenas na prática',1],['Não há capacitação',0]],rec:'Montar um plano de capacitação contínua e participar de eventos e redes do setor.'},
+ {id:'e5',t:'Que ferramentas apoiam a captação?',o:[['CRM, automação de e-mail e WhatsApp e pagamento recorrente integrados',3],['Ferramentas isoladas, sem integração',2],['Planilhas e controles manuais',1],['Nenhuma',0]],rec:'Integrar CRM, disparo de e-mail e WhatsApp e meios de pagamento recorrente.'},
+ {id:'e6',t:'Como a organização enxerga a captação?',o:[['Toda a organização entende e contribui',3],['Liderança e algumas áreas se envolvem',2],['É vista como tarefa só do captador',1],['Há constrangimento em pedir',0]],rec:'Trabalhar a cultura de captação: é uma função profissional, com metas e retorno, e não se faz sozinho.'},
+ {id:'e7',t:'Como é o voluntariado?',o:[['Programa com coordenação, termo, funções e conversão em doadores',3],['Programa com coordenação',2],['Voluntários sem estrutura',1],['Não há voluntários',0]],rec:'Estruturar o voluntariado com coordenação e termo assinado, e convidar voluntários a se tornarem doadores.'},
+ {id:'e8',t:'A liderança dedica tempo ao relacionamento com financiadores?',o:[['Sim, de forma regular e planejada',3],['Quando é solicitada',2],['Raramente',1],['Não participa',0]],rec:'Reservar agenda fixa da liderança para articulação e relacionamento com financiadores.'}]}
+];
+
+const FONTES=[{id:'pf',n:'Indivíduos',c:'--s1'},{id:'pj',n:'Empresas',c:'--s2'},{id:'fund',n:'Fundações e institutos',c:'--s3'},{id:'gov',n:'Governo',c:'--s4'},{id:'renda',n:'Eventos e geração de renda',c:'--s5'},{id:'out',n:'Outras',c:'--s6'}];
+const ESTR=[
+ ['tmk','Telemarketing e carnê','pf','L'],['dig','Digital (site, redes, WhatsApp)','pf','L'],['mala','Mala direta','pf','L'],['f2f','Face to face','pf','L'],['gd','Grandes doadores PF','pf','L'],['irpf','Destinação de IR pessoa física','pf','C'],['nf','Nota fiscal','pf','L'],['cofre','Cofrinho e arredondamento','pf','L'],
+ ['amiga','Empresa Amiga (PJ recorrente)','pj','L'],['patro','Patrocínio e doações pontuais','pj','L'],['leis','Leis de incentivo','pj','C'],['mrc','Marketing relacionado à causa','pj','L'],
+ ['edit','Editais e fundações','fund','C'],['intl','Cooperação internacional','fund','C'],
+ ['emenda','Emendas e convênios','gov','C'],
+ ['event','Eventos e leilões','renda','L'],['bazar','Bazar, produtos e serviços','renda','L'],
+ ['outras','Outras estratégias','out','L']
+].map(a=>({id:a[0],n:a[1],f:a[2],tipo:a[3]}));
+const FASES=['Introdução','Crescimento','Maturidade','Saturação','Declínio'];
+const MES=['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+
+/* ============ ESTADO ============ */
+const KEY='everest-diagnostico-v1';
+function blank(){return {exemplo:false,org:{nome:'',causa:'',cidade:'',orcamento:null,equipe:null},ans:{},ano:2026,strat:{},data:{},ind:{custo:null,ativos:null,recorrentes:null,anterior:null,retidos:null}}}
+function exemplo(){
+  const s=blank(); s.exemplo=true;
+  s.org={nome:'Associação Exemplo',causa:'Saúde',cidade:'Campinas/SP',orcamento:2400000,equipe:38};
+  const a={c1:2,c2:1,c3:1,c4:1,c5:1,c6:2,c7:1,c8:1,c9:1,r1:1,r2:2,r3:[0,1,4],r4:1,r5:2,r6:2,r7:2,r8:2,m1:2,m2:1,m3:1,m4:[0,1,3,6],m5:2,m6:1,m7:1,m8:2,
+    g1:0,g2:1,g3:2,g4:1,g5:2,g6:[0,2,3],g7:1,g8:1,f1:1,f2:1,f3:3,f4:2,f5:2,f6:2,f7:2,f8:1,p1:0,p2:1,p3:1,p4:2,p5:2,p6:1,p7:1,p8:0,e1:2,e2:2,e3:2,e4:1,e5:2,e6:2,e7:1,e8:1};
+  s.ans=a;
+  const on=(id,fase,meta)=>{s.strat[id]={on:true,fase,meta}};
+  on('tmk',3,520000);on('dig',1,110000);on('amiga',1,150000);on('leis',2,260000);on('edit',2,180000);on('event',2,90000);on('nf',2,40000);on('emenda',2,150000);
+  const w=i=>1+0.08*Math.sin(i*2.3)+0.05*Math.cos(i*1.1);
+  const mk=f=>Array.from({length:24},(_,i)=>i>21?null:Math.max(0,Math.round(f(i)/100)*100));
+  s.data.tmk=mk(i=>46000*(1-0.006*i)*w(i));
+  s.data.dig=mk(i=>3800*Math.pow(1.045,i)*w(i+3)*(i%12===11?1.9:1));
+  s.data.amiga=mk(i=>i<4?0:(4200+520*(i-4))*w(i+1));
+  s.data.leis=mk(i=>[11,23].includes(i)?190000:[5,17].includes(i)?38000:i===20?24000:0);
+  s.data.edit=mk(i=>({2:60000,8:45000,14:52000,19:70000})[i]||0);
+  s.data.event=mk(i=>({4:34000,9:41000,16:37000,21:46000})[i]||0);
+  s.data.nf=mk(i=>3100*w(i+5));
+  s.data.emenda=mk(i=>({6:120000,18:80000})[i]||0);
+  s.ind={custo:228000,ativos:2150,recorrentes:1240,anterior:2380,retidos:1570};
+  return s;
+}
+let S; try{S=JSON.parse(localStorage.getItem(KEY))}catch(e){} if(!S||!S.org) S=exemplo();
+const save=()=>{try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}};
+let ui={dim:0,tab:1,confirm:false};
+
+/* ============ UTIL ============ */
+const $=s=>document.querySelector(s);
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const brl=v=>v==null?'–':'R$ '+Math.round(v).toLocaleString('pt-BR');
+const brlK=v=>{const a=Math.abs(v);return 'R$ '+(a>=1e6?(v/1e6).toLocaleString('pt-BR',{maximumFractionDigits:1})+' mi':a>=1e3?Math.round(v/1e3)+' mil':Math.round(v))};
+const pct=(v,d=0)=>v==null||!isFinite(v)?'–':(v*100).toLocaleString('pt-BR',{maximumFractionDigits:d,minimumFractionDigits:d})+'%';
+const nfmt=v=>v==null?'':Number(v).toLocaleString('pt-BR');
+function parseBR(t){t=String(t).trim().replace(/[^\d,.-]/g,''); if(!t) return null; if(t.includes(',')) t=t.replace(/\./g,'').replace(',','.'); else if(/^\d{1,3}(\.\d{3})+$/.test(t)) t=t.replace(/\./g,''); const n=parseFloat(t); return isFinite(n)?n:null}
+const css=v=>getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+const sum=a=>a.reduce((x,y)=>x+(y||0),0);
+
+/* ============ CÁLCULO ============ */
+function ptsQ(q){const a=S.ans[q.id]; if(a==null) return null;
+  if(q.multi){ if(!a.length) return null; const n=a.filter(i=>i>=0).length; return n>=q.th[2]?3:n>=q.th[1]?2:n>=q.th[0]?1:0 }
+  return q.o[a]?q.o[a][1]:null}
+function scoreDim(d){let p=0,n=0; d.qs.forEach(q=>{const v=ptsQ(q); if(v!=null){p+=v;n++}}); return {resp:n,total:d.qs.length,score:n?Math.round(p/(3*n)*100):null}}
+function calc(){
+  const dims=DIMS.map(d=>({...d,...scoreDim(d)}));
+  const ok=dims.filter(d=>d.score!=null);
+  const geral=ok.length?Math.round(sum(ok.map(d=>d.score))/ok.length):null;
+  const ativos=ESTR.filter(e=>S.strat[e.id]?.on);
+  const serie=id=>Array.from({length:24},(_,i)=>{const v=(S.data[id]||[])[i]; return v==null?null:v});
+  const rows=ativos.map(e=>({...e,v:serie(e.id),cfg:S.strat[e.id]}));
+  let L=-1; rows.forEach(r=>r.v.forEach((x,i)=>{if(x!=null&&i>L)L=i}));
+  const tot=Array.from({length:24},(_,i)=>i<=L?sum(rows.map(r=>r.v[i])):null);
+  const R={dims,geral,rows,L,tot,temDados:L>=0};
+  if(L<0) return R;
+  // período de comparação: ano recente até o último mês informado, contra os mesmos meses do ano anterior
+  const emB=L>=12, m=emB?L-12:L;            // m = índice do último mês dentro do ano
+  const rng=(a,off)=>sum(a.slice(off,off+m+1));
+  R.m=m; R.emB=emB; R.anoRef=emB?S.ano:S.ano-1;
+  R.periodo=`${MES[0]}–${MES[m]} ${R.anoRef}`;
+  rows.forEach(r=>{
+    r.atual=rng(r.v,emB?12:0); r.ant=emB?rng(r.v,0):null;
+    r.var=r.ant>0?r.atual/r.ant-1:null;
+    r.tend=!emB?'–':r.ant===0&&r.atual>0?'Nova':r.atual===0&&r.ant>0?'Interrompida':r.var>0.1?'Crescendo':r.var<-0.1?'Em queda':'Estável';
+    r.meta=emB?(r.cfg.meta||null):null;
+    r.metaPct=r.meta?r.atual/r.meta:null;
+    r.ritmo=r.meta?r.atual/(r.meta*(m+1)/12):null;
+  });
+  R.atual=sum(rows.map(r=>r.atual)); R.ant=emB?sum(rows.map(r=>r.ant)):null;
+  R.var=R.ant>0?R.atual/R.ant-1:null;
+  rows.forEach(r=>r.share=R.atual>0?r.atual/R.atual:0);
+  const comMeta=rows.filter(r=>r.meta);
+  R.meta=sum(comMeta.map(r=>r.meta)); R.metaReal=sum(comMeta.map(r=>r.atual));
+  R.ritmo=R.meta?R.metaReal/(R.meta*(m+1)/12):null;
+  R.top=[...rows].sort((a,b)=>b.share-a.share)[0];
+  R.livre=R.atual>0?sum(rows.filter(r=>(r.cfg.tipo||r.tipo)==='L').map(r=>r.atual))/R.atual:null;
+  R.fontes=FONTES.map(f=>({...f,v:Array.from({length:24},(_,i)=>i<=L?sum(rows.filter(r=>r.f===f.id).map(r=>r.v[i])):null)})).filter(f=>rows.some(r=>r.f===f.id));
+  R.nAtivas=rows.filter(r=>r.share>=0.03).length;
+  const u12=sum(tot.slice(Math.max(0,L-11),L+1)); R.u12=u12;
+  const i=S.ind; R.roi=i.custo>0?u12/i.custo:null; R.ret=i.anterior>0&&i.retidos!=null?i.retidos/i.anterior:null; R.recorr=i.ativos>0&&i.recorrentes!=null?i.recorrentes/i.ativos:null;
+  return R;
+}
+function analise(R){
+  const fortes=[],atenc=[],prox=[];
+  const ok=R.dims.filter(d=>d.score!=null).sort((a,b)=>b.score-a.score);
+  ok.filter(d=>d.score>=65).slice(0,3).forEach(d=>fortes.push(`<b>${d.nome}</b> está no nível ${NIVEIS[nivel(d.score)].n} (${d.score}%).`));
+  if(R.temDados){
+    if(R.var!=null&&R.var>0.05) fortes.push(`A captação cresceu <b>${pct(R.var)}</b> em ${R.periodo} na comparação com o mesmo período do ano anterior.`);
+    R.rows.filter(r=>r.tend==='Crescendo'&&r.share>=0.05).forEach(r=>fortes.push(`<b>${r.n}</b> cresce ${pct(r.var)} e já responde por ${pct(r.share)} da captação.`));
+    R.rows.filter(r=>r.tend==='Nova').forEach(r=>fortes.push(`<b>${r.n}</b> é uma estratégia nova, que já trouxe ${brl(r.atual)} no período.`));
+    if(R.ritmo!=null&&R.ritmo>=1) fortes.push(`O realizado está em <b>${pct(R.ritmo)}</b> do esperado para o período: a meta anual está no ritmo.`);
+    if(R.ret!=null&&R.ret>=0.7) fortes.push(`A retenção de doadores é de <b>${pct(R.ret)}</b>.`);
+    if(R.top&&R.top.share<=0.3&&R.rows.length>=3) fortes.push(`Nenhuma estratégia passa de 30% da receita. A maior é ${R.top.n}, com ${pct(R.top.share)}.`);
+
+    if(R.var!=null&&R.var<-0.05) atenc.push(`A captação caiu <b>${pct(-R.var)}</b> em ${R.periodo} na comparação com o mesmo período do ano anterior.`);
+    if(R.top&&R.top.share>0.3){ const g=R.top.share>0.7?'Dependência crítica':R.top.share>0.5?'Dependência alta':'Concentração acima do recomendado';
+      atenc.push(`${g}: <b>${R.top.n}</b> responde por ${pct(R.top.share)} da captação. A referência é não depender de mais de 30% de uma única estratégia.`);
+      prox.push(`Reduzir a dependência de ${R.top.n} com uma meta intermediária de ${R.top.share>0.5?'50%':'40%'} e reforço das estratégias que já crescem${R.rows.some(r=>r.tend==='Crescendo')?' ('+R.rows.filter(r=>r.tend==='Crescendo').map(r=>r.n).join(', ')+')':''}.`)}
+    R.rows.filter(r=>r.tend==='Em queda'&&r.share>=0.08).forEach(r=>{
+      const f=FASES[r.cfg.fase]; atenc.push(`<b>${r.n}</b> caiu ${pct(-r.var)} e representa ${pct(r.share)} da receita${f?`. A organização classificou a estratégia na fase de ${f.toLowerCase()}`:''}.`);
+      prox.push(`Revisar ${r.n}: ${r.id==='tmk'?'scripts curtos e segmentados, metas por operador, recuperação de inativos e pagamento recorrente automático.':'identificar a causa da queda e definir se a estratégia recebe um reforço ou é substituída.'}`)});
+    R.rows.filter(r=>r.tend==='Interrompida').forEach(r=>atenc.push(`<b>${r.n}</b> não teve entradas em ${R.periodo}, depois de ${brl(r.ant)} no mesmo período do ano anterior.`));
+    if(R.livre!=null&&R.livre<0.4){atenc.push(`Apenas <b>${pct(R.livre)}</b> da captação é de recursos livres. Recursos carimbados exigem prestação de contas e não cobrem custos fixos.`);
+      prox.push('Definir meta de recursos livres suficiente para cobrir a folha administrativa, priorizando doação recorrente de pessoas e de pequenas e médias empresas.')}
+    if(R.ritmo!=null&&R.ritmo<0.9){atenc.push(`O realizado está em <b>${pct(R.ritmo)}</b> do esperado para o período. Faltam ${brl(R.meta-R.metaReal)} para a meta anual, cerca de ${brl((R.meta-R.metaReal)/Math.max(1,11-R.m))} por mês até dezembro.`)}
+    R.rows.filter(r=>r.ritmo!=null&&r.ritmo<0.7&&r.meta>0).slice(0,3).forEach(r=>atenc.push(`<b>${r.n}</b> está em ${pct(r.metaPct)} da meta anual, abaixo do ritmo esperado.`));
+    if(R.ret!=null&&R.ret<0.6){atenc.push(`A retenção de doadores é de <b>${pct(R.ret)}</b>: de cada 10 doadores do ano anterior, ${Math.round((1-R.ret)*10)} não doaram de novo.`);prox.push('Implantar a régua de relacionamento completa e campanhas de recuperação de inativos para elevar a retenção.')}
+    if(R.roi!=null&&R.roi<3) atenc.push(`Cada R$ 1 investido em captação retornou <b>R$ ${R.roi.toLocaleString('pt-BR',{maximumFractionDigits:1})}</b> nos últimos 12 meses. A referência mínima é 3 vezes o custo.`);
+    if(R.nAtivas<3) atenc.push(`Só ${R.nAtivas} ${R.nAtivas===1?'estratégia tem':'estratégias têm'} participação relevante (3% ou mais). O nível intermediário pede ao menos 3 fontes, e o avançado, 5.`);
+    const c4=S.ans.c4; if(c4!=null&&R.top){const real=R.top.share<=0.3?0:R.top.share<=0.5?1:R.top.share<=0.7?2:3; if(real>c4) atenc.push(`A concentração informada no questionário é menor do que a calculada com os números (${pct(R.top.share)} em ${R.top.n}). Vale revisar a percepção da equipe sobre a dependência.`)}
+  }
+  ok.filter(d=>d.score<40).forEach(d=>atenc.push(`<b>${d.nome}</b> está no nível Básico (${d.score}%).`));
+  [...ok].reverse().slice(0,3).forEach(d=>{ const piores=d.qs.map(q=>({q,p:ptsQ(q)})).filter(x=>x.p!=null&&x.p<=1).sort((a,b)=>a.p-b.p).slice(0,2);
+    piores.forEach(x=>prox.push(`<span class="muted">${d.curto}:</span> ${x.q.rec}`))});
+  return {fortes,atenc,prox:prox.slice(0,8)};
+}
+
+/* ============ TELAS ============ */
+function banner(){ if(!S.exemplo) return '';
+  return `<div class="banner"><p><b>Dados de exemplo.</b> As respostas e os valores abaixo são fictícios, para mostrar como o diagnóstico funciona. Você pode alterá-los livremente ou começar do zero.</p>
+  <button class="btn small" data-act="reset">${ui.confirm?'Confirmar: apagar o exemplo':'Começar em branco'}</button></div>`}
+function vInicio(){
+  const R=calc(); const resp=sum(R.dims.map(d=>d.resp)), tot=sum(R.dims.map(d=>d.total)); const o=S.org;
+  return `${banner()}
+  <section class="hero">
+    <div><p class="eyebrow">Autodiagnóstico para organizações da sociedade civil</p>
+      <h1>Onde a sua organização está na captação de recursos, e qual o próximo passo</h1>
+      <p class="lead">Responda sobre captação, relacionamento com doadores, comunicação, governança, finanças, programas e equipe. Informe os valores captados por estratégia nos últimos dois anos. O resultado mostra o nível de maturidade em cada área e a evolução da captação.</p>
+      <div class="row"><a class="btn primary" href="#questionario">${resp?'Continuar o questionário':'Começar o questionário'}</a><a class="btn" href="#resultado">Ver o resultado</a>
+      <span class="muted num">${resp} de ${tot} perguntas respondidas</span></div></div>
+    <ol class="steps">
+      <li><div><b>Questionário</b><span>${tot} perguntas de múltipla escolha em 7 áreas. Leva cerca de 25 minutos.</span></div></li>
+      <li><div><b>Números da captação</b><span>Valor captado mês a mês por estratégia, metas do ano e indicadores de doadores.</span></div></li>
+      <li><div><b>Resultado</b><span>Radar de maturidade, evolução por estratégia, meta x realizado e prioridades recomendadas.</span></div></li>
+    </ol>
+  </section>
+  <section class="panel"><h3>Sobre a organização</h3><p class="sub">Esses dados identificam o diagnóstico no resultado.</p>
+    <div class="fields">
+      <label class="f">Nome da organização<input type="text" id="org-nome" data-org="nome" value="${esc(o.nome)}"></label>
+      <label class="f">Área de atuação<select id="org-causa" data-org="causa">${['','Assistência social','Saúde','Educação','Cultura','Esporte','Meio ambiente','Direitos humanos','Outra'].map(c=>`<option ${c===o.causa?'selected':''}>${c}</option>`).join('')}</select></label>
+      <label class="f">Cidade e UF<input type="text" id="org-cidade" data-org="cidade" value="${esc(o.cidade)}"></label>
+      <label class="f">Orçamento anual (R$)<input type="text" inputmode="decimal" id="org-orc" data-org="orcamento" data-num value="${nfmt(o.orcamento)}"></label>
+      <label class="f">Pessoas na equipe<input type="text" inputmode="numeric" id="org-eq" data-org="equipe" data-num value="${nfmt(o.equipe)}"></label>
+    </div></section>`}
+function dimNav(){return DIMS.map((d,i)=>{const s=scoreDim(d);return `<button data-act="dim" data-i="${i}" aria-current="${i===ui.dim}"><span>${d.nome}</span><span class="count ${s.resp===s.total?'done':''}">${s.resp}/${s.total}</span></button>`}).join('')}
+function vQuest(){
+  const d=DIMS[ui.dim];
+  const qs=d.qs.map((q,n)=>{const a=S.ans[q.id];
+    const opts=q.multi? q.multi.map((l,i)=>`<label class="opt"><input type="checkbox" id="${q.id}-${i}" data-q="${q.id}" data-i="${i}" ${a&&a.includes(i)?'checked':''}><span>${l}</span></label>`).join('')+`<label class="opt"><input type="checkbox" id="${q.id}-n" data-q="${q.id}" data-i="-1" ${a&&a.includes(-1)?'checked':''}><span>Nenhuma destas</span></label>`
+      : q.o.map((o,i)=>`<label class="opt"><input type="radio" name="${q.id}" id="${q.id}-${i}" data-q="${q.id}" data-i="${i}" ${a===i?'checked':''}><span>${o[0]}</span></label>`).join('');
+    return `<fieldset class="q"><legend>${n+1}. ${q.t}</legend>${q.multi?'<p class="hint">Marque todas as que se aplicam.</p>':''}<div class="opts">${opts}</div></fieldset>`}).join('');
+  return `${banner()}<div class="qlayout"><nav class="dimnav" id="dimnav" aria-label="Áreas do questionário">${dimNav()}</nav>
+   <div class="stack"><header><p class="eyebrow">Área ${ui.dim+1} de ${DIMS.length}</p><h2>${d.nome}</h2><p class="sub">${d.desc}</p></header>${qs}
+   <div class="row spread">${ui.dim>0?`<button class="btn" data-act="dim" data-i="${ui.dim-1}">Área anterior</button>`:'<span></span>'}
+   ${ui.dim<DIMS.length-1?`<button class="btn primary" data-act="dim" data-i="${ui.dim+1}">Próxima área</button>`:`<a class="btn primary" href="#numeros">Ir para os números</a>`}</div></div></div>`}
+function vNumeros(){
+  const ativos=ESTR.filter(e=>S.strat[e.id]?.on); const yA=S.ano-1,yB=S.ano; const off=ui.tab*12; const i=S.ind;
+  const chips=FONTES.map(f=>`<div class="fonte-group"><span><i class="dot" style="background:var(${f.c})"></i>${f.n}</span><div class="chips">${ESTR.filter(e=>e.f===f.id).map(e=>`<button class="chip" data-act="strat" data-id="${e.id}" aria-pressed="${!!S.strat[e.id]?.on}">${e.n}</button>`).join('')}</div></div>`).join('');
+  const cfg=ativos.map(e=>{const c=S.strat[e.id];return `<tr><td>${e.n}</td>
+    <td><select id="tipo-${e.id}" data-cfg="tipo" data-id="${e.id}"><option value="L" ${(c.tipo||e.tipo)==='L'?'selected':''}>Livre</option><option value="C" ${(c.tipo||e.tipo)==='C'?'selected':''}>Carimbado</option></select></td>
+    <td><select id="fase-${e.id}" data-cfg="fase" data-id="${e.id}"><option value="">Não sei</option>${FASES.map((f,k)=>`<option value="${k}" ${c.fase===k?'selected':''}>${f}</option>`).join('')}</select></td>
+    <td class="r"><input type="text" inputmode="decimal" id="meta-${e.id}" data-cfg="meta" data-id="${e.id}" value="${nfmt(c.meta)}" aria-label="Meta ${yB} de ${e.n}"></td></tr>`}).join('');
+  const grid=ativos.map((e,r)=>`<tr><td>${e.n}</td>${MES.map((m,k)=>`<td><input type="text" inputmode="decimal" id="m-${e.id}-${off+k}" data-m="${e.id}" data-i="${off+k}" data-r="${r}" data-c="${k}" value="${nfmt((S.data[e.id]||[])[off+k])}" aria-label="${e.n}, ${m} de ${ui.tab?yB:yA}"></td>`).join('')}<td class="r num" id="tot-${e.id}">${brl(sum((S.data[e.id]||[]).slice(off,off+12)))}</td></tr>`).join('');
+  return `${banner()}
+  <section class="sec"><header><h2>Estratégias de captação</h2><p class="sub">Selecione as estratégias que geraram receita nos últimos dois anos. Elas aparecem nas tabelas abaixo.</p></header>
+   <div class="panel">${chips}</div></section>
+  ${ativos.length?`
+  <section class="sec"><header><h2>Meta e fase de cada estratégia</h2><p class="sub">Recurso livre pode ser usado em qualquer despesa. Recurso carimbado só pode ser usado no projeto aprovado. A fase indica o momento da estratégia no seu ciclo de vida.</p></header>
+   <div class="panel scroll"><table class="cfg"><thead><tr><th>Estratégia</th><th>Tipo de recurso</th><th>Fase</th><th class="r">Meta ${yB} (R$)</th></tr></thead><tbody>${cfg}</tbody></table></div></section>
+  <section class="sec"><header><h2>Valor captado por mês</h2><p class="sub">Informe o valor recebido em cada mês, em reais. Deixe em branco os meses que ainda não aconteceram. É possível colar várias células copiadas de uma planilha.</p></header>
+   <div class="row"><div class="tabs"><button data-act="tab" data-i="0" aria-pressed="${ui.tab===0}">${yA}</button><button data-act="tab" data-i="1" aria-pressed="${ui.tab===1}">${yB}</button></div>
+   <label class="row sub" style="gap:6px;font-size:13px">Ano mais recente <select id="ano" data-ano style="width:auto">${[2024,2025,2026,2027].map(y=>`<option ${y===S.ano?'selected':''}>${y}</option>`).join('')}</select></label></div>
+   <div class="panel scroll"><table class="grid" id="grid"><thead><tr><th>Estratégia</th>${MES.map(m=>`<th class="r">${m}</th>`).join('')}<th class="r">Total</th></tr></thead><tbody>${grid}</tbody></table></div></section>`
+  :`<div class="empty">Selecione ao menos uma estratégia para informar metas e valores.</div>`}
+  <section class="sec"><header><h2>Doadores e investimento</h2><p class="sub">Esses números permitem calcular retenção, recorrência e retorno do investimento em captação.</p></header>
+   <div class="panel"><div class="fields">
+    <label class="f">Doadores ativos nos últimos 12 meses<input type="text" inputmode="numeric" id="ind-ativos" data-ind="ativos" value="${nfmt(i.ativos)}"></label>
+    <label class="f">Destes, quantos doam todo mês<input type="text" inputmode="numeric" id="ind-rec" data-ind="recorrentes" value="${nfmt(i.recorrentes)}"></label>
+    <label class="f">Doadores ativos no ano anterior<input type="text" inputmode="numeric" id="ind-ant" data-ind="anterior" value="${nfmt(i.anterior)}"></label>
+    <label class="f">Destes, quantos doaram de novo<input type="text" inputmode="numeric" id="ind-ret" data-ind="retidos" value="${nfmt(i.retidos)}"></label>
+    <label class="f">Investimento anual em captação (R$)<input type="text" inputmode="decimal" id="ind-custo" data-ind="custo" value="${nfmt(i.custo)}"></label>
+   </div></div></section>
+  <div class="row spread"><a class="btn" href="#questionario">Voltar ao questionário</a><a class="btn primary" href="#resultado">Ver o resultado</a></div>`}
+
+const lvPill=s=>s==null?'<span class="pill">Sem respostas</span>':`<span class="pill"><i style="background:var(--lv${nivel(s)+1})"></i>${NIVEIS[nivel(s)].n}</span>`;
+const stat=(v,g,w)=>v==null?'':v>=g?'good':v>=w?'warn':'crit';
+function spark(v){const pts=v.map((y,i)=>[i,y]).filter(p=>p[1]!=null); if(pts.length<2) return ''; const mx=Math.max(...pts.map(p=>p[1]),1);
+  const xy=pts.map(p=>[2+p[0]*116/23,26-p[1]/mx*22]); const l=xy[xy.length-1];
+  return `<svg width="120" height="30" viewBox="0 0 120 30" role="img" aria-label="Evolução em 24 meses"><polyline points="${xy.map(p=>p.map(n=>n.toFixed(1)).join(',')).join(' ')}" style="fill:none;stroke:var(--accent);stroke-width:1.5"/><circle cx="${l[0].toFixed(1)}" cy="${l[1].toFixed(1)}" r="2.5" style="fill:var(--accent)"/></svg>`}
+let R_;
+function vResultado(){
+  const R=R_=calc(); const A=analise(R); const g=R.geral;
+  if(g==null&&!R.temDados) return `${banner()}<div class="empty">Ainda não há respostas. <a href="#questionario">Comece pelo questionário</a>.</div>`;
+  const lv=g==null?0:nivel(g); const resp=sum(R.dims.map(d=>d.resp)), tot=sum(R.dims.map(d=>d.total));
+  const dimRows=R.dims.map(d=>`<div class="dimrow"><span>${d.nome}</span><span class="row" style="gap:8px"><b class="num">${d.score==null?'–':d.score+'%'}</b>${lvPill(d.score)}</span><div class="track"><b style="width:${d.score||0}%;background:var(--lv${d.score==null?1:nivel(d.score)+1})"></b></div></div>`).join('');
+  let cap='';
+  if(R.temDados){
+    const k=(v,l,n,st)=>`<div class="kpi"><span class="l">${l}</span><span class="v">${v}</span><span class="n">${st?`<span class="st ${st[0]}">${st[1]}</span> `:''}${n||''}</span></div>`;
+    const kp=[k(brlK(R.atual),`Captado em ${R.periodo}`,R.var!=null?`${R.var>=0?'+':'−'}${pct(Math.abs(R.var))} sobre o ano anterior`:'',R.var!=null?[R.var>=0?'good':'crit',R.var>=0?'Cresceu':'Caiu']:null)];
+    if(R.ritmo!=null) kp.push(k(pct(R.ritmo),'Ritmo da meta anual',`${brlK(R.metaReal)} de ${brlK(R.meta)}`,[stat(R.ritmo,.95,.8),R.ritmo>=.95?'No ritmo':R.ritmo>=.8?'Atenção':'Abaixo']));
+    if(R.top) kp.push(k(pct(R.top.share),'Maior concentração',R.top.n,[R.top.share<=.3?'good':R.top.share<=.5?'warn':'crit',R.top.share<=.3?'Dentro dos 30%':'Acima dos 30%']));
+    if(R.livre!=null) kp.push(k(pct(R.livre),'Recursos livres','do total captado',[stat(R.livre,.5,.3),R.livre>=.5?'Saudável':R.livre>=.3?'Atenção':'Baixo']));
+    if(R.ret!=null) kp.push(k(pct(R.ret),'Retenção de doadores','doaram de novo este ano',[stat(R.ret,.7,.55),R.ret>=.7?'Boa':R.ret>=.55?'Atenção':'Baixa']));
+    if(R.roi!=null) kp.push(k(R.roi.toLocaleString('pt-BR',{maximumFractionDigits:1})+'x','Retorno da captação','captado por R$ 1 investido',[stat(R.roi,5,3),R.roi>=5?'Bom':R.roi>=3?'Mínimo':'Baixo']));
+    const metas=R.rows.filter(r=>r.meta).sort((a,b)=>b.meta-a.meta).map(r=>{const st=stat(r.ritmo,.95,.8);
+      return `<div class="bar"><span>${r.n}</span><span class="st ${st}">${r.ritmo>=.95?'No ritmo':r.ritmo>=.8?'Atenção':'Abaixo do ritmo'}</span>
+      <div class="track"><b style="width:${Math.min(100,r.metaPct*100)}%;background:var(--s1)"></b><i class="tick" style="left:${(R.m+1)/12*100}%"></i></div>
+      <span class="note num">${brl(r.atual)} de ${brl(r.meta)} · ${pct(r.metaPct)} da meta anual</span></div>`}).join('');
+    const mxS=Math.max(.6,R.top.share); const mix=[...R.rows].sort((a,b)=>b.share-a.share).map(r=>`<div class="bar"><span><i class="dot" style="background:var(${FONTES.find(f=>f.id===r.f).c})"></i> ${r.n}</span><b class="num">${pct(r.share)}</b>
+      <div class="track"><b style="width:${r.share/mxS*100}%;background:var(${FONTES.find(f=>f.id===r.f).c})"></b><i class="tick" style="left:${.3/mxS*100}%"></i></div></div>`).join('');
+    const tb=[...R.rows].sort((a,b)=>b.atual-a.atual).map(r=>`<tr><td>${r.n}</td><td>${spark(r.v)}</td><td class="r num">${r.ant==null?'–':brl(r.ant)}</td><td class="r num">${brl(r.atual)}</td><td class="r num">${r.var==null?'–':(r.var>=0?'+':'−')+pct(Math.abs(r.var))}</td>
+      <td><span class="st ${r.tend==='Crescendo'||r.tend==='Nova'?'good':r.tend==='Em queda'||r.tend==='Interrompida'?'crit':''}">${r.tend}</span></td><td>${FASES[r.cfg.fase]||'–'}</td><td>${(r.cfg.tipo||r.tipo)==='L'?'Livre':'Carimbado'}</td></tr>`).join('');
+    cap=`<section class="sec"><header><h2>Evolução da captação</h2><p class="sub">Comparação de ${R.periodo} com os mesmos meses do ano anterior.</p></header>
+      <div class="kpis">${kp.join('')}</div>
+      <div class="panel"><h3>Captação mensal por fonte</h3><p class="sub">Valor recebido em cada mês, somando as estratégias de cada fonte.</p>
+        <div class="legend">${R.fontes.map(f=>`<span><i class="dot" style="background:var(${f.c})"></i>${f.n}</span>`).join('')}</div><div class="chartbox"><canvas id="chMensal" role="img" aria-label="Barras empilhadas da captação mensal por fonte em 24 meses"></canvas></div></div>
+      <div class="grid2">
+        <div class="panel"><h3>Acumulado no ano</h3><p class="sub">Total captado desde janeiro, ${S.ano-1} e ${S.ano}.</p><div class="legend"><span><i class="dot" style="background:var(--muted)"></i>${S.ano-1}</span><span><i class="dot" style="background:var(--s1)"></i>${S.ano}</span></div><div class="chartbox"><canvas id="chAcum" role="img" aria-label="Linhas do acumulado anual"></canvas></div></div>
+        <div class="panel"><h3>Participação de cada estratégia</h3><p class="sub">Parcela do captado em ${R.periodo}. A linha vertical marca o limite recomendado de 30%.</p>${mix}</div>
+      </div>
+      ${metas?`<div class="panel"><h3>Meta x realizado em ${S.ano}</h3><p class="sub">A barra mostra o realizado sobre a meta anual. A linha vertical marca onde a estratégia deveria estar em ${MES[R.m]}.</p>${metas}</div>`:''}
+      <div class="panel"><h3>Desempenho por estratégia</h3><p class="sub">Evolução em 24 meses e variação entre os períodos.</p><div class="scroll"><table><thead><tr><th>Estratégia</th><th>24 meses</th><th class="r">${MES[0]}–${MES[R.m]} ${R.anoRef-1}</th><th class="r">${R.periodo}</th><th class="r">Variação</th><th>Tendência</th><th>Fase</th><th>Recurso</th></tr></thead><tbody>${tb}</tbody></table></div></div>
+    </section>`;
+  } else cap=`<div class="empty">Sem valores de captação informados. <a href="#numeros">Preencha os números</a> para ver a evolução por estratégia.</div>`;
+  const li=a=>a.length?a.map(x=>`<li><span>${x}</span></li>`).join(''):'<li><span class="muted">Nada a destacar com os dados informados.</span></li>';
+  const det=R.dims.map(d=>`<details><summary><span>${d.nome}</span><span class="row" style="gap:8px"><span class="num">${d.score==null?'–':d.score+'%'}</span>${lvPill(d.score)}</span></summary><div class="inner">${
+    d.qs.map(q=>{const p=ptsQ(q); if(p==null) return `<div class="qa"><span>${q.t}</span><span class="muted">Sem resposta</span></div>`;
+      const a=S.ans[q.id]; const txt=q.multi?(a.filter(i=>i>=0).map(i=>q.multi[i]).join('; ')||'Nenhuma destas'):q.o[a][0];
+      return `<div class="qa"><span>${q.t}</span><b class="num">${p.toLocaleString('pt-BR')}/3</b><span class="a">${txt}</span>${p<=1?`<span class="rec">${q.rec}</span>`:''}</div>`}).join('')}</div></details>`).join('');
+  return `${banner()}
+  <section class="score"><div><p class="eyebrow">${esc(S.org.nome)||'Organização'}${S.org.cidade?' · '+esc(S.org.cidade):''}</p><div class="big num">${g??'–'}<small>/100</small></div></div>
+   <div><h2>Nível ${g==null?'não calculado':NIVEIS[lv].n}</h2><p class="sub" style="max-width:60ch;margin-top:6px">${g==null?'Responda o questionário para calcular o nível de maturidade.':NIVEIS[lv].d}</p>
+   <div class="ladder">${NIVEIS.map((n,i)=>`<div class="${i===lv&&g!=null?'on':''}" style="border-color:${g!=null&&i<=lv?`var(--lv${i+1})`:'var(--surface-2)'}">${n.n}<br><span class="num">${n.min}${i<3?'–'+(NIVEIS[i+1].min-1):'–100'}</span></div>`).join('')}</div>
+   ${resp<tot?`<p class="muted" style="margin-top:10px;font-size:13px">${resp} de ${tot} perguntas respondidas. O resultado considera apenas as respondidas.</p>`:''}</div></section>
+  <section class="sec"><header><h2>Maturidade por área</h2></header><div class="grid2">
+    <div class="panel"><h3>Radar de maturidade</h3><p class="sub">Pontuação de 0 a 100 em cada área. A linha tracejada marca a entrada no nível Avançado.</p><div class="legend"><span><i class="dot" style="background:var(--accent)"></i>${esc(S.org.nome)||'Organização'}</span><span><i class="dot" style="background:var(--muted)"></i>Nível Avançado (65)</span></div><div class="chartbox radar"><canvas id="chRadar" role="img" aria-label="Radar de maturidade nas sete áreas"></canvas></div></div>
+    <div class="panel"><h3>Pontuação e nível</h3><p class="sub">Cada área é classificada em um dos quatro níveis.</p>${dimRows}</div></div></section>
+  ${cap}
+  <section class="sec"><header><h2>Análise</h2><p class="sub">Leitura automática das respostas e dos números informados.</p></header>
+    <div class="grid2"><div class="panel"><h3>Pontos fortes</h3><ul class="find good">${li(A.fortes)}</ul></div><div class="panel"><h3>Pontos de atenção</h3><ul class="find warn">${li(A.atenc)}</ul></div></div>
+    <div class="panel"><h3>Prioridades recomendadas</h3><p class="sub">Ações sugeridas a partir das áreas com menor pontuação e dos alertas da captação.</p><ul class="find next">${li(A.prox)}</ul></div></section>
+  <section class="sec"><header><h2>Respostas por área</h2><p class="sub">Abra cada área para ver a pontuação de cada pergunta e a recomendação para os itens mais frágeis.</p></header><div class="panel" style="padding-block:4px">${det}</div></section>
+  <section class="panel"><h3>Dados do diagnóstico</h3><p class="sub">Copie as respostas para guardar ou enviar à consultoria. Para carregar um diagnóstico salvo, cole o conteúdo no campo e clique em Carregar.</p>
+    <div class="row"><button class="btn" data-act="copy">Copiar respostas</button><button class="btn" data-act="load">Carregar</button><span class="muted" id="msg" role="status"></span></div>
+    <textarea id="json" aria-label="Dados do diagnóstico em JSON" style="margin-top:10px" placeholder="Cole aqui um diagnóstico salvo"></textarea></section>`}
+
+/* ============ GRÁFICOS ============ */
+let charts=[];
+function draw(){ charts.forEach(c=>c.destroy()); charts=[]; const R=R_; if(!R||!window.Chart) return;
+  const ink=css('--ink'),ink2=css('--ink-2'),line=css('--line'),surf=css('--surface'),acc=css('--accent'),mut=css('--muted');
+  Chart.defaults.font.family='Inter, system-ui, sans-serif'; Chart.defaults.color=ink2; Chart.defaults.font.size=12;
+  const tip={backgroundColor:ink,titleColor:surf,bodyColor:surf,padding:10,cornerRadius:6,boxPadding:4};
+  const rd=$('#chRadar'); if(rd) charts.push(new Chart(rd,{type:'radar',data:{labels:R.dims.map(d=>d.curto),datasets:[
+     {label:S.org.nome||'Organização',data:R.dims.map(d=>d.score??0),borderColor:acc,backgroundColor:acc+'33',borderWidth:2,pointBackgroundColor:acc,pointRadius:4,pointHoverRadius:6},
+     {label:'Nível Avançado',data:R.dims.map(()=>65),borderColor:mut,borderDash:[5,4],borderWidth:1.5,pointRadius:0,pointHitRadius:0,fill:false}]},
+    options:{maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{...tip,filter:i=>i.datasetIndex===0,callbacks:{label:c=>` ${c.raw}% · ${NIVEIS[nivel(c.raw)].n}`}}},
+      scales:{r:{min:0,max:100,ticks:{stepSize:20,backdropColor:'transparent',color:mut,font:{size:10}},grid:{color:line},angleLines:{color:line},pointLabels:{color:ink,font:{size:13,weight:'600'}}}}}}));
+  const mm=$('#chMensal'); if(mm){ const labels=Array.from({length:24},(_,i)=>MES[i%12]+'/'+String(i<12?S.ano-1:S.ano).slice(2));
+    charts.push(new Chart(mm,{type:'bar',data:{labels,datasets:R.fontes.map(f=>({label:f.n,data:f.v,backgroundColor:css(f.c),borderColor:surf,borderWidth:1,borderRadius:2,maxBarThickness:26}))},
+     options:{maintainAspectRatio:false,interaction:{mode:'index',intersect:false},plugins:{legend:{display:false},tooltip:{...tip,callbacks:{label:c=>c.raw?` ${c.dataset.label}: ${brl(c.raw)}`:null,footer:it=>'Total: '+brl(sum(it.map(i=>i.raw)))}}},
+      scales:{x:{stacked:true,grid:{display:false},ticks:{maxRotation:0,autoSkipPadding:10}},y:{stacked:true,grid:{color:line},border:{display:false},ticks:{callback:v=>brlK(v)}}}}}))}
+  const ac=$('#chAcum'); if(ac){ const cum=o=>{let t=0;return Array.from({length:12},(_,i)=>{const v=R.tot[o+i]; if(v==null) return null; t+=v; return t})};
+    charts.push(new Chart(ac,{type:'line',data:{labels:MES,datasets:[
+      {label:String(S.ano-1),data:cum(0),borderColor:mut,backgroundColor:mut,borderWidth:2,pointRadius:0,pointHoverRadius:5,tension:.15},
+      {label:String(S.ano),data:cum(12),borderColor:css('--s1'),backgroundColor:css('--s1'),borderWidth:2.5,pointRadius:c=>c.dataIndex===R.m&&R.emB?5:0,pointHoverRadius:5,tension:.15}]},
+     options:{maintainAspectRatio:false,interaction:{mode:'index',intersect:false},plugins:{legend:{display:false},tooltip:{...tip,callbacks:{label:c=>` ${c.dataset.label}: ${brl(c.raw)}`}}},
+      scales:{x:{grid:{display:false}},y:{beginAtZero:true,grid:{color:line},border:{display:false},ticks:{callback:v=>brlK(v)}}}}}))}
+}
+
+/* ============ ROTAS E EVENTOS ============ */
+const VIEWS={inicio:vInicio,questionario:vQuest,numeros:vNumeros,resultado:vResultado};
+function route(){const h=location.hash.slice(1); return VIEWS[h]?h:'inicio'}
+function render(keep){ const r=route(); const y=window.scrollY;
+  $('#app').innerHTML=VIEWS[r](); document.querySelectorAll('#nav a').forEach(a=>a.getAttribute('href')==='#'+r?a.setAttribute('aria-current','page'):a.removeAttribute('aria-current'));
+  if(r==='resultado') draw(); window.scrollTo(0,keep?y:0)}
+window.addEventListener('hashchange',()=>{ui.confirm=false;render()});
+document.addEventListener('click',e=>{const b=e.target.closest('[data-act]'); if(!b) return; const a=b.dataset.act;
+  if(a==='dim'){ui.dim=+b.dataset.i;render()}
+  else if(a==='tab'){ui.tab=+b.dataset.i;render(true)}
+  else if(a==='strat'){const id=b.dataset.id; S.strat[id]=S.strat[id]||{}; S.strat[id].on=!S.strat[id].on; save(); render(true)}
+  else if(a==='reset'){ if(!ui.confirm){ui.confirm=true;render(true)} else {S=blank();ui.confirm=false;save();render()} }
+  else if(a==='copy'){const t=JSON.stringify(S); const ta=$('#json'); ta.value=t; const ok=()=>$('#msg').textContent='Respostas copiadas.';
+    (navigator.clipboard?navigator.clipboard.writeText(t):Promise.reject()).then(ok).catch(()=>{ta.select();$('#msg').textContent='Texto selecionado. Use Ctrl+C para copiar.'})}
+  else if(a==='load'){try{const o=JSON.parse($('#json').value); if(!o.org||!o.ans) throw 0; S=Object.assign(blank(),o); save(); render()}catch(x){$('#msg').textContent='Não foi possível ler os dados. Cole o texto completo copiado de um diagnóstico.'}}
+});
+document.addEventListener('change',e=>{const t=e.target;
+  if(t.dataset.q){const q=t.dataset.q,i=+t.dataset.i;
+    if(t.type==='radio') S.ans[q]=i;
+    else{ let a=(S.ans[q]||[]).filter(x=>x!==i); if(t.checked) a=i===-1?[-1]:[...a.filter(x=>x!==-1),i];
+      S.ans[q]=a; document.querySelectorAll(`input[data-q="${q}"]`).forEach(c=>c.checked=a.includes(+c.dataset.i)); if(!a.length) delete S.ans[q] }
+    save(); const n=$('#dimnav'); if(n) n.innerHTML=dimNav() }
+  else if(t.dataset.cfg){const c=S.strat[t.dataset.id]; const k=t.dataset.cfg; c[k]=k==='meta'?parseBR(t.value):k==='fase'?(t.value===''?null:+t.value):t.value; if(k==='meta') t.value=nfmt(c.meta); save()}
+  else if(t.hasAttribute('data-ano')){S.ano=+t.value;save();render(true)}
+  else if(t.dataset.org){S.org[t.dataset.org]=t.hasAttribute('data-num')?parseBR(t.value):t.value; if(t.hasAttribute('data-num')) t.value=nfmt(S.org[t.dataset.org]); save()}
+  else if(t.dataset.ind){S.ind[t.dataset.ind]=parseBR(t.value); t.value=nfmt(S.ind[t.dataset.ind]); save()}
+  else if(t.dataset.m){setCell(t.dataset.m,+t.dataset.i,parseBR(t.value)); t.value=nfmt(parseBR(t.value)); save()}
+});
+function setCell(id,i,v){ const a=S.data[id]=S.data[id]||[]; while(a.length<24) a.push(null); a[i]=v; const off=ui.tab*12; const el=$('#tot-'+id); if(el) el.textContent=brl(sum(a.slice(off,off+12)))}
+document.addEventListener('paste',e=>{const t=e.target; if(!t.dataset||!t.dataset.m) return; const txt=(e.clipboardData||window.clipboardData).getData('text'); if(!/[\t\n]/.test(txt.trim())) return;
+  e.preventDefault(); const r0=+t.dataset.r,c0=+t.dataset.c; txt.replace(/\r/g,'').split('\n').filter(l=>l.length).forEach((ln,dr)=>ln.split('\t').forEach((cell,dc)=>{
+    const inp=document.querySelector(`#grid input[data-r="${r0+dr}"][data-c="${c0+dc}"]`); if(!inp) return; const v=parseBR(cell); inp.value=nfmt(v); setCell(inp.dataset.m,+inp.dataset.i,v)})); save()});
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change',()=>{if(route()==='resultado')draw()});
+new MutationObserver(()=>{if(route()==='resultado')draw()}).observe(document.documentElement,{attributes:true,attributeFilter:['data-theme']});
+render();
+</script>
