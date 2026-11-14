@@ -7,7 +7,7 @@
   --bg: #f2f5f4; --surface: #ffffff; --surface2: #e9eeec;
   --ink: #15211d; --ink2: #4c5d57; --muted: #74837d; --line: #d9e0dd;
   --accent: #0f6b5c; --accent-ink: #ffffff;
-  --s-in: #2a78d6; --s-out: #eb6834; --s-bar: #2a78d6;
+  --s-in: #2a78d6; --s-out: #eb6834; --s-bar: #2a78d6; --s-acc: #1baf7a;
   --good: #006300; --crit: #b93030; --warn-bg: #fdf0d2; --warn-ink: #6b4a00;
   --f-display: "Space Grotesk", "IBM Plex Sans", system-ui, sans-serif;
   --f-body: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
@@ -17,14 +17,14 @@
   --bg: #111615; --surface: #1a201e; --surface2: #232b28;
   --ink: #e7eeeb; --ink2: #a8b5af; --muted: #84928c; --line: #2d3733;
   --accent: #4fc3ad; --accent-ink: #06231d;
-  --s-in: #3987e5; --s-out: #d95926; --s-bar: #3987e5;
+  --s-in: #3987e5; --s-out: #d95926; --s-bar: #3987e5; --s-acc: #199e70;
   --good: #4cc04c; --crit: #ef7b7b; --warn-bg: #3a2f10; --warn-ink: #f2d27a;
   color-scheme: dark } }
 :root[data-theme="dark"] {
   --bg: #111615; --surface: #1a201e; --surface2: #232b28;
   --ink: #e7eeeb; --ink2: #a8b5af; --muted: #84928c; --line: #2d3733;
   --accent: #4fc3ad; --accent-ink: #06231d;
-  --s-in: #3987e5; --s-out: #d95926; --s-bar: #3987e5;
+  --s-in: #3987e5; --s-out: #d95926; --s-bar: #3987e5; --s-acc: #199e70;
   --good: #4cc04c; --crit: #ef7b7b; --warn-bg: #3a2f10; --warn-ink: #f2d27a;
   color-scheme: dark }
 
@@ -174,6 +174,25 @@ dialog h2 { font-family: var(--f-display); font-size: 17px; margin: 0; }
         <p class="hint" id="mensal-hint"></p>
         <div class="legend"><span><i style="background:var(--s-in)"></i>Entradas</span><span><i style="background:var(--s-out)"></i>Saídas</span></div>
         <div class="chart" id="ch-mensal"></div>
+      </div>
+      <div class="panel">
+        <h2>Projeção para os próximos 10 anos</h2>
+        <p class="hint">Quanto fica guardado se a entrada mensal e a média de saídas se mantiverem. Não segue os filtros acima; altere os valores para simular.</p>
+        <div class="inlineform">
+          <label class="field"><span>Entrada mensal (R$)</span><input id="p-ent" inputmode="decimal" class="num"></label>
+          <label class="field"><span>Média de saídas por mês (R$)</span><input id="p-sai" inputmode="decimal" class="num"></label>
+          <label class="field"><span>Guardado hoje (R$)</span><input id="p-saldo" inputmode="decimal" class="num"></label>
+          <label class="field"><span>Rendimento ao ano (%)</span><input id="p-rend" inputmode="decimal" class="num" style="width:110px"></label>
+          <button class="btn" type="button" id="p-reset">Usar valores calculados</button>
+        </div>
+        <p class="hint" id="p-base"></p>
+        <div class="kpis" id="p-kpis" style="margin-bottom:12px"></div>
+        <div class="legend"><span><i style="background:var(--s-in)"></i>Entradas acumuladas</span><span><i style="background:var(--s-out)"></i>Saídas acumuladas</span><span><i style="background:var(--s-acc)"></i>Guardado no banco</span></div>
+        <div class="chart" id="ch-proj"></div>
+        <div class="tablebox" style="margin-top:12px"><table style="min-width:520px">
+          <thead><tr><th>Ano</th><th class="r">Entradas no ano</th><th class="r">Saídas no ano</th><th class="r">Rendimento</th><th class="r">Guardado ao fim do ano</th></tr></thead>
+          <tbody id="p-body"></tbody>
+        </table></div>
       </div>
       <div class="grid2">
         <div class="panel"><h2>Saídas por categoria</h2><p class="hint">Maiores categorias no período filtrado.</p><div class="bars" id="ch-cat"></div></div>
@@ -445,6 +464,88 @@ dialog h2 { font-family: var(--f-display); font-size: 17px; margin: 0; }
     };
     el.onmouseleave = function () { tip.hidden = true; guia.setAttribute("visibility", "hidden"); };
   }
+  /* ---------- projeção de 10 anos ---------- */
+  var PROJ = { manual: {} };
+  try { PROJ.manual = JSON.parse(localStorage.getItem("proj") || "{}") || {}; } catch (e) {}
+  function projBase() {
+    // Últimos 12 meses até o mês atual, pela data de pagamento, só o que já foi pago e sem movimentações internas.
+    var fim = hojeISO().slice(0, 7), ini = somaMeses(fim + "-01", -11).slice(0, 7), meses = {}, saldo = 0;
+    S.itens.forEach(function (x) {
+      if (x.status !== "pago") return;
+      if (x.origem === "conta") saldo += x.tipo === "entrada" ? x.valor : -x.valor;
+      if (x.categoria.indexOf("Aplicações") === 0) saldo += x.valor; else if (x.categoria.indexOf("Resgate") === 0) saldo -= x.valor;
+      var k = x.dataPagamento.slice(0, 7); if (x.interno || k < ini || k > fim) return;
+      meses[k] = meses[k] || { e: 0, s: 0 }; meses[k][x.tipo === "entrada" ? "e" : "s"] += x.valor;
+    });
+    var ks = Object.keys(meses).sort(), n = ks.length || 1;
+    var ents = ks.map(function (k) { return meses[k].e; }).filter(function (v) { return v > 0; }).sort(function (a, b) { return a - b; });
+    var med = ents.length ? (ents.length % 2 ? ents[(ents.length - 1) / 2] : (ents[ents.length / 2 - 1] + ents[ents.length / 2]) / 2) : 0;
+    return { ent: Math.round(med * 100) / 100, sai: Math.round(ks.reduce(function (a, k) { return a + meses[k].s; }, 0) / n * 100) / 100, saldo: Math.max(0, Math.round(saldo * 100) / 100), rend: 0, n: ks.length, ini: ks[0], fim: ks[ks.length - 1] };
+  }
+  function renderProj() {
+    var b = projBase(), v = {};
+    ["ent", "sai", "saldo", "rend"].forEach(function (c) {
+      var el = $("p-" + c), manual = PROJ.manual[c] != null;
+      v[c] = manual ? PROJ.manual[c] : b[c];
+      if (document.activeElement !== el) el.value = v[c].toLocaleString("pt-BR", { minimumFractionDigits: c === "rend" ? 0 : 2, maximumFractionDigits: 2 });
+    });
+    $("p-base").textContent = b.n ? "Calculado dos lançamentos pagos de " + mesLabel(b.ini) + " a " + mesLabel(b.fim) + " (" + b.n + " meses com dados): média de saídas " + brl.format(b.sai) +
+      " por mês; entrada típica (mediana mensal) " + brl.format(b.ent) + "; guardado hoje = saldo da conta mais aplicações menos resgates." : "Ainda não há lançamentos pagos para calcular as médias; informe os valores.";
+    var taxa = Math.pow(1 + v.rend / 100, 1 / 12) - 1, pts = [{ e: 0, s: 0, g: v.saldo }], anos = [], ano0 = +hojeISO().slice(0, 4), mes0 = +hojeISO().slice(5, 7), g = v.saldo, e = 0, sd = 0;
+    for (var i = 1; i <= 120; i++) {
+      var juros = g > 0 ? g * taxa : 0; g += juros + v.ent - v.sai; e += v.ent; sd += v.sai; pts.push({ e: e, s: sd, g: g });
+      var a = ano0 + Math.floor((mes0 - 1 + i) / 12), reg = anos[anos.length - 1];
+      if (!reg || reg.ano !== a) { reg = { ano: a, e: 0, s: 0, j: 0, g: 0 }; anos.push(reg); }
+      reg.e += v.ent; reg.s += v.sai; reg.j += juros; reg.g = g;
+    }
+    var sobra = v.ent - v.sai;
+    $("p-kpis").innerHTML =
+      '<div class="kpi"><div class="lbl"><i style="background:var(--s-in)"></i>Entrada por mês</div><div class="val">' + brl.format(v.ent) + "</div></div>" +
+      '<div class="kpi"><div class="lbl"><i style="background:var(--s-out)"></i>Média de saídas por mês</div><div class="val">' + brl.format(v.sai) + "</div></div>" +
+      '<div class="kpi"><div class="lbl">Sobra por mês</div><div class="val ' + (sobra >= 0 ? "pos" : "neg") + '">' + (sobra >= 0 ? "+" : "−") + brl.format(Math.abs(sobra)) + "</div></div>" +
+      '<div class="kpi"><div class="lbl"><i style="background:var(--s-acc)"></i>Guardado em 10 anos</div><div class="val ' + (g >= 0 ? "" : "neg") + '">' + (g < 0 ? "−" : "") + brl.format(Math.abs(g)) + '</div><div class="sub">em ' + MESES[mes0 - 1] + "/" + (ano0 + 10) + "</div></div>";
+    $("p-body").innerHTML = anos.map(function (r) {
+      return "<tr><td class=\"num\">" + r.ano + '</td><td class="r num">' + brl.format(r.e) + '</td><td class="r num">' + brl.format(r.s) + '</td><td class="r num">' + brl.format(r.j) + '</td><td class="r num ' + (r.g < 0 ? "neg" : "") + '">' + (r.g < 0 ? "−" : "") + brl.format(Math.abs(r.g)) + "</td></tr>";
+    }).join("");
+    // gráfico
+    var el = $("ch-proj"), W = Math.max(300, el.clientWidth || 640), H = 260, L = 70, R = 14, T = 12, B = 26;
+    var vals = []; pts.forEach(function (p) { vals.push(p.e, p.s, p.g); });
+    var max = Math.max.apply(null, vals.concat([1])), min = Math.min.apply(null, vals.concat([0]));
+    var passo = Math.pow(10, Math.floor(Math.log10(max - min))); passo = (max - min) / passo < 2 ? passo / 4 : (max - min) / passo < 5 ? passo / 2 : passo;
+    var topo = Math.ceil(max / passo) * passo, piso = Math.floor(min / passo) * passo;
+    var y = function (q) { return T + (H - T - B) * (1 - (q - piso) / (topo - piso)); }, x = function (i) { return L + (W - L - R) * i / 120; };
+    var fmt = function (q) { var a = Math.abs(q); return (q < 0 ? "−" : "") + "R$ " + (a >= 1e6 ? (a / 1e6).toLocaleString("pt-BR", { maximumFractionDigits: 1 }) + " mi" : Math.round(a / 1000) + " mil"); };
+    var svg = '<svg viewBox="0 0 ' + W + " " + H + '" role="img" aria-label="Projeção de entradas, saídas e valor guardado em 10 anos">';
+    for (var t = piso; t <= topo + 0.001; t += passo) svg += '<line x1="' + L + '" x2="' + (W - R) + '" y1="' + y(t) + '" y2="' + y(t) + '" stroke="var(--' + (Math.abs(t) < 0.001 ? "muted" : "line") + ')" stroke-width="1"/><text x="' + (L - 6) + '" y="' + (y(t) + 4) + '" text-anchor="end">' + fmt(t) + "</text>";
+    var cada = W < 520 ? 2 : 1;
+    for (var k = 0; k <= 10; k += cada) svg += '<text x="' + x(k * 12) + '" y="' + (H - 8) + '" text-anchor="' + (k === 0 ? "start" : k === 10 ? "end" : "middle") + '">' + MESES[mes0 - 1] + "/" + String(ano0 + k).slice(2) + "</text>";
+    svg += '<line id="pguia" x1="0" x2="0" y1="' + T + '" y2="' + (H - B) + '" stroke="var(--muted)" stroke-width="1" visibility="hidden"/>';
+    [["e", "var(--s-in)"], ["s", "var(--s-out)"], ["g", "var(--s-acc)"]].forEach(function (sr) {
+      svg += '<path fill="none" stroke="' + sr[1] + '" stroke-width="' + (sr[0] === "g" ? 3 : 2) + '" stroke-linejoin="round" stroke-linecap="round" d="' + pts.map(function (p, i) { return (i ? "L" : "M") + x(i).toFixed(1) + " " + y(p[sr[0]]).toFixed(1); }).join("") + '"/>' +
+        '<circle cx="' + x(120) + '" cy="' + y(pts[120][sr[0]]) + '" r="4" fill="' + sr[1] + '" stroke="var(--surface)" stroke-width="2"/>';
+    });
+    el.innerHTML = svg + '</svg><div class="tip" hidden></div>';
+    var tip = el.querySelector(".tip"), guia = el.querySelector("#pguia");
+    el.onmousemove = el.onclick = function (ev) {
+      var box = el.getBoundingClientRect(), px = (ev.clientX - box.left) * W / box.width, i = Math.max(0, Math.min(120, Math.round((px - L) / (W - L - R) * 120))), p = pts[i];
+      guia.setAttribute("x1", x(i)); guia.setAttribute("x2", x(i)); guia.setAttribute("visibility", "visible");
+      var mm = (mes0 - 1 + i) % 12, aa = ano0 + Math.floor((mes0 - 1 + i) / 12);
+      tip.innerHTML = "<strong>" + MESES[mm] + "/" + aa + "</strong><br>Entradas acumuladas <b>" + brl.format(p.e) + "</b><br>Saídas acumuladas <b>" + brl.format(p.s) + "</b><br>Guardado <b>" + brl.format(p.g) + "</b>";
+      tip.hidden = false;
+      var tx = x(i) * box.width / W + 12; if (tx + tip.offsetWidth > box.width) tx = x(i) * box.width / W - tip.offsetWidth - 12;
+      tip.style.left = Math.max(0, tx) + "px"; tip.style.top = "8px";
+    };
+    el.onmouseleave = function () { tip.hidden = true; guia.setAttribute("visibility", "hidden"); };
+  }
+  ["ent", "sai", "saldo", "rend"].forEach(function (c) {
+    $("p-" + c).addEventListener("input", function () {
+      var n = parseValor(this.value); if (isNaN(n)) return;
+      PROJ.manual[c] = n; try { localStorage.setItem("proj", JSON.stringify(PROJ.manual)); } catch (e) {}
+      renderProj();
+    });
+  });
+  $("p-reset").addEventListener("click", function () { PROJ.manual = {}; try { localStorage.removeItem("proj"); } catch (e) {} renderProj(); });
+
   function renderPainel() {
     var xs = filtrados(), ent = xs.filter(function (x) { return x.tipo === "entrada"; }), sai = xs.filter(function (x) { return x.tipo === "saida"; });
     var e = soma(ent), s = soma(sai), ab = soma(sai.filter(function (x) { return x.status === "aberto"; }));
@@ -455,6 +556,7 @@ dialog h2 { font-family: var(--f-display); font-size: 17px; margin: 0; }
       '<div class="kpi"><div class="lbl">Em aberto no período</div><div class="val">' + brl.format(ab) + '</div><div class="sub">saídas ainda não pagas</div></div>';
     $("mensal-hint").textContent = "Segue os filtros acima. Agrupado pela data de " + (S.f.base === "dataPagamento" ? "pagamento (fatura do cartão no dia 10)" : "compra") + ".";
     chartMensal(xs);
+    renderProj();
     barras($("ch-cat"), agrupa(sai, "categoria"), 9);
     barras($("ch-meio"), agrupa(sai, "meio"), 8);
     barras($("ch-estab"), agrupa(sai, "estabelecimento"), 9);
