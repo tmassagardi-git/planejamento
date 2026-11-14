@@ -110,6 +110,8 @@ td.acts { white-space: nowrap; text-align: right; }
 .pill.aberto { background: var(--warn-bg); color: var(--warn-ink); border-color: transparent; }
 .pill.aberto::before { background: transparent; border: 1.5px solid currentColor; }
 .tag { font-size: 11px; border: 1px solid var(--line); border-radius: 4px; padding: 0 5px; color: var(--ink2); white-space: nowrap; }
+tr.grp td { background: var(--surface); } tr.sub td { background: var(--bg); padding-block: 6px; }
+tr.sub td:first-child { padding-left: 44px; }
 .pager { display: flex; gap: 10px; align-items: center; justify-content: flex-end; color: var(--ink2); }
 
 dialog { border: 1px solid var(--line); border-radius: 12px; background: var(--surface); color: var(--ink); padding: 0; width: min(640px, calc(100vw - 32px)); }
@@ -132,7 +134,7 @@ dialog h2 { font-family: var(--f-display); font-size: 17px; margin: 0; }
 <header class="top"><div class="wrap">
   <div class="brand">Finanças Thiago<small id="sync">carregando…</small></div>
   <nav class="tabs" id="tabs">
-    <a href="#painel">Painel</a><a href="#lancamentos">Lançamentos</a><a href="#recorrentes">Recorrentes</a><a href="#cadastros">Cadastros</a>
+    <a href="#painel">Dashboard</a><a href="#lancamentos">Lançamentos</a><a href="#recorrentes">Recorrentes</a><a href="#cadastros">Cadastros</a>
   </nav>
   <button class="btn primary" id="btn-novo" type="button">+ Novo lançamento</button>
 </div></header>
@@ -168,7 +170,7 @@ dialog h2 { font-family: var(--f-display); font-size: 17px; margin: 0; }
     <div style="display:flex;flex-direction:column;gap:12px">
       <div class="kpis" id="kpis"></div>
       <div class="panel">
-        <h2>Entradas e saídas por mês</h2>
+        <h2 id="mensal-titulo">Entradas e saídas mês a mês</h2>
         <p class="hint" id="mensal-hint"></p>
         <div class="legend"><span><i style="background:var(--s-in)"></i>Entradas</span><span><i style="background:var(--s-out)"></i>Saídas</span></div>
         <div class="chart" id="ch-mensal"></div>
@@ -195,9 +197,9 @@ dialog h2 { font-family: var(--f-display); font-size: 17px; margin: 0; }
   <section id="v-recorrentes" hidden>
     <div class="panel">
       <h2>Despesas e receitas recorrentes</h2>
-      <p class="hint">Lançamentos marcados como recorrentes. "Lançar próximo" cria o do mês seguinte, em aberto, com o último valor.</p>
+      <p class="hint">Cada recorrente reúne os seus lançamentos mês a mês. Abra com ▸ para ver, editar, marcar como pago ou excluir cada um. "Lançar próximo" cria o do mês seguinte ao último, em aberto.</p>
       <div class="tablebox" style="border:0"><table style="min-width:720px">
-        <thead><tr><th>Estabelecimento</th><th>Categoria</th><th>Tipo de pagamento</th><th>Último pagamento</th><th class="r">Último valor</th><th class="r">Vezes</th><th></th></tr></thead>
+        <thead><tr><th>Recorrente</th><th>Próximo em aberto</th><th class="r">Valor</th><th>Situação</th><th></th></tr></thead>
         <tbody id="r-body"></tbody>
       </table></div>
     </div>
@@ -272,7 +274,7 @@ dialog h2 { font-family: var(--f-display); font-size: 17px; margin: 0; }
 
   var S = {
     db: null, docs: {}, itens: [], porId: {}, estabs: [], cats: [], cadDocs: {},
-    tab: "painel", pagina: 0, editId: null, tipoForm: "saida", pagManual: false,
+    tab: "painel", pagina: 0, recAberto: {}, editId: null, tipoForm: "saida", pagManual: false,
     f: { de: "2026-01-01", ate: "2026-12-31", base: "dataPagamento", tipo: "", meio: "", conta: "", cat: "", status: "", q: "", int: false }
   };
 
@@ -399,39 +401,49 @@ dialog h2 { font-family: var(--f-display); font-size: 17px; margin: 0; }
     }).join("");
   }
   function chartMensal(xs) {
-    var el = $("ch-mensal"), m = {};
-    xs.forEach(function (x) { var k = x[S.f.base].slice(0, 7); m[k] = m[k] || { e: 0, s: 0 }; m[k][x.tipo === "entrada" ? "e" : "s"] += x.valor; });
-    var meses = Object.keys(m).sort();
-    if (!meses.length) { el.innerHTML = '<div class="empty">Nada no período filtrado.</div>'; return; }
-    if (meses.length > 24) meses = meses.slice(-24);
-    var W = Math.max(300, el.clientWidth || 640), H = 230, L = 62, R = 8, T = 10, B = 26;
-    var max = Math.max.apply(null, meses.map(function (k) { return Math.max(m[k].e, m[k].s, 0); })) || 1;
+    var el = $("ch-mensal"), m = {}, base = S.f.base;
+    if (!xs.length) { el.innerHTML = '<div class="empty">Nada no período filtrado.</div>'; $("mensal-titulo").textContent = "Entradas e saídas"; return; }
+    var datas = xs.map(function (x) { return x[base]; }).sort(), ini = datas[0], fim = datas[datas.length - 1];
+    var dias = (new Date(fim) - new Date(ini)) / 864e5, diario = dias <= 62, corte = diario ? 10 : 7;
+    xs.forEach(function (x) { var k = x[base].slice(0, corte); m[k] = m[k] || { e: 0, s: 0 }; m[k][x.tipo === "entrada" ? "e" : "s"] += x.valor; });
+    var chaves = [], k = ini.slice(0, corte), ult = fim.slice(0, corte), guarda = 0;
+    while (k <= ult && guarda++ < 400) {
+      chaves.push(k); m[k] = m[k] || { e: 0, s: 0 };
+      if (diario) { var d = new Date(k + "T12:00:00"); d.setDate(d.getDate() + 1); k = d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0"); }
+      else k = somaMeses(k + "-01", 1).slice(0, 7);
+    }
+    var rot = function (c) { return diario ? c.slice(8, 10) + "/" + c.slice(5, 7) : mesLabel(c); };
+    $("mensal-titulo").textContent = "Entradas e saídas " + (diario ? "dia a dia" : "mês a mês");
+    var W = Math.max(300, el.clientWidth || 640), H = 250, L = 62, R = 14, T = 12, B = 26, n = chaves.length;
+    var max = Math.max.apply(null, chaves.map(function (c) { return Math.max(m[c].e, m[c].s, 0); })) || 1;
     var passo = Math.pow(10, Math.floor(Math.log10(max))); passo = max / passo < 2 ? passo / 4 : max / passo < 5 ? passo / 2 : passo;
     var topo = Math.ceil(max / passo) * passo, y = function (v) { return T + (H - T - B) * (1 - Math.max(0, v) / topo); };
-    var bw = (W - L - R) / meses.length, w = Math.max(3, Math.min(22, (bw - 8) / 2)), pula = Math.ceil(meses.length / Math.max(1, Math.floor((W - L - R) / 46)));
-    var s = '<svg viewBox="0 0 ' + W + " " + H + '" role="img" aria-label="Entradas e saídas por mês">';
+    var x = function (i) { return n === 1 ? (L + W - R) / 2 : L + (W - L - R) * i / (n - 1); };
+    var pula = Math.ceil(n / Math.max(1, Math.floor((W - L - R) / 50)));
+    var svg = '<svg viewBox="0 0 ' + W + " " + H + '" role="img" aria-label="Entradas e saídas no período">';
     for (var t = 0; t <= topo + 0.001; t += passo) {
-      s += '<line x1="' + L + '" x2="' + (W - R) + '" y1="' + y(t) + '" y2="' + y(t) + '" stroke="var(--line)" stroke-width="1"/>' +
+      svg += '<line x1="' + L + '" x2="' + (W - R) + '" y1="' + y(t) + '" y2="' + y(t) + '" stroke="var(--line)" stroke-width="1"/>' +
         '<text x="' + (L - 6) + '" y="' + (y(t) + 4) + '" text-anchor="end">' + compacto(t) + "</text>";
     }
-    meses.forEach(function (k, i) {
-      var cx = L + bw * i + bw / 2, base = y(0);
-      var barra = function (v, x, cor) { var h = Math.max(0, base - y(v)), r = Math.min(4, h); return h < 0.5 ? "" : '<path fill="' + cor + '" d="M' + x + " " + base + "v" + (-(h - r)) + "q0 " + (-r) + " " + r + " " + (-r) + "h" + (w - 2 * r) + "q" + r + " 0 " + r + " " + r + "v" + (h - r) + 'z"/>'; };
-      s += barra(m[k].e, cx - w - 1, "var(--s-in)") + barra(m[k].s, cx + 1, "var(--s-out)");
-      if (i % pula === 0) s += '<text x="' + cx + '" y="' + (H - 8) + '" text-anchor="middle">' + mesLabel(k) + "</text>";
-      s += '<rect data-m="' + k + '" x="' + (L + bw * i) + '" y="' + T + '" width="' + bw + '" height="' + (H - T - B) + '" fill="transparent"/>';
+    chaves.forEach(function (c, i) { if (i % pula === 0) svg += '<text x="' + x(i) + '" y="' + (H - 8) + '" text-anchor="' + (i === 0 && n > 1 ? "start" : i === n - 1 && n > 1 ? "end" : "middle") + '">' + rot(c) + "</text>"; });
+    svg += '<line id="guia" x1="0" x2="0" y1="' + T + '" y2="' + (H - B) + '" stroke="var(--muted)" stroke-width="1" visibility="hidden"/>';
+    [["e", "var(--s-in)"], ["s", "var(--s-out)"]].forEach(function (sr) {
+      svg += '<path fill="none" stroke="' + sr[1] + '" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" d="' +
+        chaves.map(function (c, i) { return (i ? "L" : "M") + x(i).toFixed(1) + " " + y(m[c][sr[0]]).toFixed(1); }).join("") + '"/>';
+      if (n <= 36) chaves.forEach(function (c, i) { svg += '<circle cx="' + x(i).toFixed(1) + '" cy="' + y(m[c][sr[0]]).toFixed(1) + '" r="4" fill="' + sr[1] + '" stroke="var(--surface)" stroke-width="2"/>'; });
     });
-    el.innerHTML = s + '</svg><div class="tip" hidden></div>';
-    var tip = el.querySelector(".tip");
+    el.innerHTML = svg + '</svg><div class="tip" hidden></div>';
+    var tip = el.querySelector(".tip"), guia = el.querySelector("#guia");
     el.onmousemove = el.onclick = function (ev) {
-      var k = ev.target.getAttribute && ev.target.getAttribute("data-m");
-      if (!k) { tip.hidden = true; return; }
-      tip.innerHTML = "<strong>" + mesLabel(k) + "</strong><br>Entradas <b>" + brl.format(m[k].e) + "</b><br>Saídas <b>" + brl.format(m[k].s) + "</b><br>Saldo <b>" + brl.format(m[k].e - m[k].s) + "</b>";
+      var box = el.getBoundingClientRect(), px = (ev.clientX - box.left) * W / box.width;
+      var i = n === 1 ? 0 : Math.max(0, Math.min(n - 1, Math.round((px - L) / (W - L - R) * (n - 1)))), c = chaves[i];
+      guia.setAttribute("x1", x(i)); guia.setAttribute("x2", x(i)); guia.setAttribute("visibility", "visible");
+      tip.innerHTML = "<strong>" + (diario ? dataBR(c) : mesLabel(c)) + "</strong><br>Entradas <b>" + brl.format(m[c].e) + "</b><br>Saídas <b>" + brl.format(m[c].s) + "</b><br>Saldo <b>" + brl.format(m[c].e - m[c].s) + "</b>";
       tip.hidden = false;
-      var box = el.getBoundingClientRect(), px = ev.clientX - box.left;
-      tip.style.left = Math.max(0, Math.min(box.width - tip.offsetWidth, px + 12)) + "px"; tip.style.top = "8px";
+      var tx = x(i) * box.width / W + 12; if (tx + tip.offsetWidth > box.width) tx = x(i) * box.width / W - tip.offsetWidth - 12;
+      tip.style.left = Math.max(0, tx) + "px"; tip.style.top = "8px";
     };
-    el.onmouseleave = function () { tip.hidden = true; };
+    el.onmouseleave = function () { tip.hidden = true; guia.setAttribute("visibility", "hidden"); };
   }
   function renderPainel() {
     var xs = filtrados(), ent = xs.filter(function (x) { return x.tipo === "entrada"; }), sai = xs.filter(function (x) { return x.tipo === "saida"; });
@@ -441,7 +453,7 @@ dialog h2 { font-family: var(--f-display); font-size: 17px; margin: 0; }
       '<div class="kpi"><div class="lbl"><i style="background:var(--s-out)"></i>Saídas</div><div class="val">' + brl.format(s) + '</div><div class="sub">' + sai.length + " lançamentos</div></div>" +
       '<div class="kpi"><div class="lbl">Saldo do período</div><div class="val ' + (e - s >= 0 ? "pos" : "neg") + '">' + (e - s >= 0 ? "+" : "−") + brl.format(Math.abs(e - s)) + '</div><div class="sub">entradas menos saídas</div></div>' +
       '<div class="kpi"><div class="lbl">Em aberto no período</div><div class="val">' + brl.format(ab) + '</div><div class="sub">saídas ainda não pagas</div></div>';
-    $("mensal-hint").textContent = "Agrupado pela data de " + (S.f.base === "dataPagamento" ? "pagamento (fatura do cartão no dia 10)" : "compra") + ".";
+    $("mensal-hint").textContent = "Segue os filtros acima. Agrupado pela data de " + (S.f.base === "dataPagamento" ? "pagamento (fatura do cartão no dia 10)" : "compra") + ".";
     chartMensal(xs);
     barras($("ch-cat"), agrupa(sai, "categoria"), 9);
     barras($("ch-meio"), agrupa(sai, "meio"), 8);
@@ -483,11 +495,19 @@ dialog h2 { font-family: var(--f-display); font-size: 17px; margin: 0; }
   function renderRec() {
     var gs = gruposRec();
     $("r-body").innerHTML = gs.length ? gs.map(function (g) {
-      var u = g.ult;
-      return "<tr><td>" + esc(u.estabelecimento) + ' <span class="tag">' + (u.tipo === "entrada" ? "entrada" : "saída") + "</span></td><td>" + esc(u.categoria) + "</td><td>" + esc(u.meio) + '<div class="sec">' + esc(u.conta) + "</div></td>" +
-        '<td class="num">' + dataBR(u.dataPagamento) + ' <span class="sec">' + (u.status === "aberto" ? "em aberto" : "pago") + '</span></td><td class="r num">' + brl.format(u.valor) + '</td><td class="r num">' + g.xs.length + "</td>" +
+      var u = g.ult, ab = g.xs.filter(function (x) { return x.status === "aberto"; }), prox = ab[0], aberto = !!S.recAberto[g.k];
+      var h = '<tr class="grp"><td><button class="btn small" data-rec="' + esc(g.k) + '" aria-expanded="' + aberto + '">' + (aberto ? "▾" : "▸") + "</button> <strong>" + esc(u.estabelecimento) + '</strong> <span class="tag">' + (u.tipo === "entrada" ? "entrada" : "saída") + "</span>" +
+        '<div class="sec">' + esc(u.categoria) + " · " + esc(u.meio) + " · " + esc(u.conta) + "</div></td>" +
+        '<td class="num">' + (prox ? dataBR(prox.dataPagamento) : '<span class="sec">nenhum em aberto</span>') + '</td><td class="r num">' + brl.format((prox || u).valor) + "</td>" +
+        '<td class="num">' + (g.xs.length - ab.length) + " pagos · " + ab.length + " em aberto" + (ab.length ? '<div class="sec">' + brl.format(soma(ab)) + " a pagar</div>" : "") + "</td>" +
         '<td class="acts"><button class="btn small" data-prox="' + u.id + '">Lançar próximo</button></td></tr>';
-    }).join("") : '<tr><td colspan="7"><div class="empty">Nenhum lançamento recorrente. Marque “Recorrente” ao criar ou editar um lançamento.</div></td></tr>';
+      if (aberto) h += g.xs.map(function (x) {
+        return '<tr class="sub"><td class="num">' + dataBR(x.dataPagamento) + (x.parcela ? ' <span class="tag">' + esc(x.parcela) + "</span>" : "") + "</td><td></td>" +
+          '<td class="r num">' + brl.format(x.valor) + '</td><td><button class="pill ' + (x.status === "aberto" ? "aberto" : "") + '" data-toggle="' + x.id + '" title="Clique para alternar">' + (x.status === "aberto" ? "Em aberto" : "Pago") + "</button></td>" +
+          '<td class="acts"><button class="btn small" data-edit="' + x.id + '">Editar</button> <button class="btn small danger" data-del="' + x.id + '">Excluir</button></td></tr>';
+      }).join("");
+      return h;
+    }).join("") : '<tr><td colspan="5"><div class="empty">Nenhum lançamento recorrente. Marque “Recorrente” ao criar ou editar um lançamento.</div></td></tr>';
   }
 
   /* ---------- cadastros ---------- */
@@ -585,6 +605,7 @@ dialog h2 { font-family: var(--f-display); font-size: 17px; margin: 0; }
     else if (b.parentNode.id === "f-tipo") { S.f.tipo = d.v; seg("f-tipo", d.v); S.pagina = 0; render(); }
     else if (b.parentNode.id === "l-tipo") { S.tipoForm = d.v; seg("l-tipo", d.v); }
     else if (d.pg) { S.pagina += +d.pg; renderLanc(); }
+    else if (d.rec) { S.recAberto[d.rec] = !S.recAberto[d.rec]; renderRec(); }
     else if (d.toggle && (x = S.porId[d.toggle])) { var m = {}; m[x.id] = { status: x.status === "aberto" ? "pago" : "aberto" }; gravarItens(m).catch(function () {}); }
     else if (d.edit && (x = S.porId[d.edit])) abrirForm(x);
     else if (d.del && (x = S.porId[d.del])) confirma(b, function () { var m = {}; m[x.id] = { excluido: true }; gravarItens(m).then(function () { toast("Lançamento excluído."); }).catch(function () {}); });

@@ -7,12 +7,12 @@ tipo de pagamento, parcelas futuras em aberto, recorrentes e painel com filtros.
 - `index.html` — a página do sistema, publicada como artefato privado no
   claude.ai. Os lançamentos ficam no banco de dados do artefato, não neste
   repositório.
-- `build_data.py` — converte a planilha de extrato e faturas nos documentos
+- `build_data.py` — converte a planilha do cartão e o extrato do Itaú (.xls) nos documentos
   que alimentam o banco (`lanc/base-NN`, `cad/estabelecimentos`,
   `cad/categorias`). Gere a saída sempre fora do repositório.
 
 ```bash
-python3 build_data.py planilha.xlsx /caminho/fora/do/repo/seed
+python3 build_data.py cartao.xlsx extrato.xls /caminho/fora/do/repo/seed
 ```
 
 ## Modelo de dados
