@@ -371,6 +371,8 @@ dialog h2 { font-family: var(--f-display); font-size: 17px; margin: 0; }
   }
   function nomesCats() { var s = {}; S.cats.forEach(function (c) { s[c.nome] = 1; }); return distintos("categoria", Object.keys(s)); }
   function renderOpcoes() {
+    // Um filtro apontando para algo que deixou de existir é limpo, em vez de esconder tudo.
+    [["meio", distintos("meio")], ["conta", distintos("conta")], ["cat", nomesCats()]].forEach(function (p) { if (S.f[p[0]] && p[1].indexOf(S.f[p[0]]) < 0) S.f[p[0]] = ""; });
     opcoes($("f-meio"), distintos("meio"), "Todos", S.f.meio);
     opcoes($("f-conta"), distintos("conta"), "Todas", S.f.conta);
     opcoes($("f-cat"), nomesCats(), "Todas", S.f.cat);
