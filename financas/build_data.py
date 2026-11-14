@@ -13,6 +13,7 @@ DIA_FATURA = 10                 # vencimento da fatura do cartão
 PAGO_ATE = "2026-11-10"         # faturas até esta data já foram pagas
 CONTA_CARTAO = "Cartão LATAM Pass"
 POR_BLOCO = 110
+IGNORAR_CONTAS = ("PJ",)        # contas da empresa não entram no controle pessoal
 
 INTERNAS = (
     "Transferência entre contas próprias",
@@ -80,6 +81,8 @@ def main(xlsx, saida):
 
     for i, r in enumerate(linhas(wb["Conta corrente"]), 1):
         data, conta, desc, meio, es, cat, valor = r
+        if conta.startswith(IGNORAR_CONTAS):
+            continue
         itens.append({
             "id": f"e{i:04d}", "origem": "conta",
             "tipo": "entrada" if es == "Entrada" else "saida",
