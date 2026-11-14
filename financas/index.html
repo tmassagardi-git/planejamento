@@ -112,6 +112,9 @@ td.acts { white-space: nowrap; text-align: right; }
 .tag { font-size: 11px; border: 1px solid var(--line); border-radius: 4px; padding: 0 5px; color: var(--ink2); white-space: nowrap; }
 tr.grp td { background: var(--surface); } tr.sub td { background: var(--bg); padding-block: 6px; }
 tr.sub td:first-child { padding-left: 44px; }
+#n-body input { width: 100%; border: 1px solid var(--line); background: var(--bg); border-radius: 5px; padding: 4px 6px; min-width: 0; }
+#n-body td { padding: 4px 6px; vertical-align: middle; } #n-body td.w { width: 84px; } #n-body td.u { width: 64px; }
+td.best { font-weight: 600; }
 .pager { display: flex; gap: 10px; align-items: center; justify-content: flex-end; color: var(--ink2); }
 
 dialog { border: 1px solid var(--line); border-radius: 12px; background: var(--surface); color: var(--ink); padding: 0; width: min(640px, calc(100vw - 32px)); }
@@ -134,7 +137,7 @@ dialog h2 { font-family: var(--f-display); font-size: 17px; margin: 0; }
 <header class="top"><div class="wrap">
   <div class="brand">Finanças Thiago<small id="sync">carregando…</small></div>
   <nav class="tabs" id="tabs">
-    <a href="#painel">Dashboard</a><a href="#lancamentos">Lançamentos</a><a href="#recorrentes">Recorrentes</a><a href="#cadastros">Cadastros</a>
+    <a href="#painel">Dashboard</a><a href="#lancamentos">Lançamentos</a><a href="#recorrentes">Recorrentes</a><a href="#cadastros">Cadastros</a><a href="#compras">Compras</a>
   </nav>
   <button class="btn primary" id="btn-novo" type="button">+ Novo lançamento</button>
 </div></header>
@@ -252,6 +255,41 @@ dialog h2 { font-family: var(--f-display); font-size: 17px; margin: 0; }
       </div>
     </div>
   </section>
+  <section id="v-compras" hidden>
+    <div style="display:flex;flex-direction:column;gap:12px">
+      <div class="toolbar">
+        <div class="seg" id="m-view"><button type="button" data-v="lista">Lista de compras</button><button type="button" data-v="precos">Comparar preços</button><button type="button" data-v="notas">Notas fiscais</button></div>
+        <button class="btn primary" type="button" id="m-nova">+ Enviar nota fiscal</button>
+      </div>
+      <p class="hint" style="margin:0;color:var(--muted);font-size:12px">Controle de compras de mercado, separado do financeiro: nada daqui entra nos lançamentos nem no dashboard.</p>
+      <div class="panel" id="m-lista" hidden>
+        <h2>Lista de compras para os próximos 20 dias</h2>
+        <p class="hint" id="m-lista-hint"></p>
+        <form class="inlineform" id="form-lista">
+          <label class="field"><span>Incluir produto</span><input id="m-prod" list="dl-prod" required maxlength="80" autocomplete="off"><datalist id="dl-prod"></datalist></label>
+          <button class="btn primary" type="submit">Incluir na lista</button>
+        </form>
+        <div class="tablebox" style="border:0"><table style="min-width:640px">
+          <thead><tr><th>Produto</th><th>Por que está na lista</th><th>Onde comprar</th><th class="r">Último preço lá</th><th></th></tr></thead>
+          <tbody id="m-lista-body"></tbody>
+        </table></div>
+      </div>
+      <div class="panel" id="m-precos" hidden>
+        <h2>Comparação de preços</h2>
+        <p class="hint" id="m-precos-hint"></p>
+        <label class="field" style="margin-bottom:8px;max-width:320px"><span>Buscar produto</span><input type="search" id="m-q"></label>
+        <div class="tablebox" style="border:0"><table id="m-precos-tab" style="min-width:640px"></table></div>
+      </div>
+      <div class="panel" id="m-notas" hidden>
+        <h2>Notas fiscais lançadas</h2>
+        <p class="hint">Cada nota guarda os itens, um a um, com quantidade e preço unitário.</p>
+        <div class="tablebox" style="border:0"><table style="min-width:560px">
+          <thead><tr><th>Data</th><th>Mercado</th><th class="r">Itens</th><th class="r">Total</th><th></th></tr></thead>
+          <tbody id="m-notas-body"></tbody>
+        </table></div>
+      </div>
+    </div>
+  </section>
 </main>
 
 <dialog id="dlg">
@@ -277,6 +315,32 @@ dialog h2 { font-family: var(--f-display); font-size: 17px; margin: 0; }
     <div class="formactions">
       <button class="btn" type="button" id="l-cancel">Cancelar</button>
       <button class="btn primary" type="submit">Salvar</button>
+    </div>
+  </form>
+</dialog>
+<dialog id="dlg-nota" style="width:min(860px, calc(100vw - 32px))">
+  <form id="form-nota" method="dialog">
+    <h2 id="nota-title">Enviar nota fiscal</h2>
+    <div class="formgrid" id="nota-ler-box">
+      <label class="field wide"><span>Foto ou print da nota</span><input type="file" id="n-file" accept="image/*"></label>
+      <div class="wide" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+        <button class="btn primary" type="button" id="n-ler">Ler nota com o Claude</button>
+        <button class="btn" type="button" id="n-parar" hidden>Parar</button>
+        <span class="sec" id="n-status" style="color:var(--ink2)"></span>
+      </div>
+    </div>
+    <div class="formgrid">
+      <label class="field"><span>Mercado</span><input id="n-mercado" list="dl-merc" required maxlength="60" autocomplete="off"><datalist id="dl-merc"></datalist></label>
+      <label class="field"><span>Data da compra</span><input type="date" id="n-data" required></label>
+    </div>
+    <div class="tablebox" style="max-height:44vh;overflow:auto"><table style="min-width:620px">
+      <thead><tr><th>Produto</th><th class="r">Qtd.</th><th>Un.</th><th class="r">Preço unit.</th><th class="r">Total</th><th></th></tr></thead>
+      <tbody id="n-body"></tbody>
+    </table></div>
+    <div class="toolbar"><button class="btn small" type="button" id="n-add">+ Adicionar item</button><span>Total da nota <strong class="num" id="n-total">R$ 0,00</strong></span></div>
+    <div class="formactions">
+      <button class="btn" type="button" id="n-cancel">Cancelar</button>
+      <button class="btn primary" type="submit">Salvar nota</button>
     </div>
   </form>
 </dialog>
@@ -625,12 +689,187 @@ dialog h2 { font-family: var(--f-display); font-size: 17px; margin: 0; }
     opcoes($("e-meio"), distintos("meio", MEIOS_BASE), "", $("e-meio").value || "Cartão de crédito");
   }
 
+  /* ---------- compras de mercado (independente do financeiro) ---------- */
+  var M = { docs: {}, notas: [], view: "lista", rows: [], editId: null, sample: null, ctl: null };
+  var HORIZONTE = 20;
+  function chave(n) { return String(n).normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_|_$/g, ""); }
+  function diasEntre(a, b) { return Math.round((new Date(b + "T12:00:00") - new Date(a + "T12:00:00")) / 864e5); }
+  function somaDias(iso, n) { var d = new Date(iso + "T12:00:00"); d.setDate(d.getDate() + n); return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0"); }
+  function reindexM() {
+    var notas = [];
+    Object.keys(M.docs).forEach(function (doc) {
+      if (doc.indexOf("notas-") !== 0) return;
+      var m = M.docs[doc].itens || {};
+      Object.keys(m).forEach(function (id) { if (m[id] && !m[id].excluido) notas.push(Object.assign({}, m[id], { id: id, _doc: doc })); });
+    });
+    M.notas = notas.sort(function (a, b) { return a.data < b.data ? 1 : -1; });
+  }
+  function produtosM() {
+    // por produto: nome, compras (data, mercado, preço) em ordem de data
+    var p = {};
+    M.notas.forEach(function (n) { (n.itens || []).forEach(function (it) {
+      var k = chave(it.produto); if (!k) return;
+      (p[k] = p[k] || { k: k, nome: it.produto, compras: [] }).compras.push({ data: n.data, mercado: n.mercado, preco: +it.preco || 0, un: it.un || "" });
+    }); });
+    return Object.keys(p).map(function (k) { p[k].compras.sort(function (a, b) { return a.data < b.data ? -1 : 1; }); return p[k]; })
+      .sort(function (a, b) { return a.nome.localeCompare(b.nome, "pt-BR"); });
+  }
+  function mercadosTop() {
+    var c = {}; M.notas.forEach(function (n) { c[n.mercado] = (c[n.mercado] || 0) + 1; });
+    return Object.keys(c).sort(function (a, b) { return c[b] - c[a] || a.localeCompare(b, "pt-BR"); }).slice(0, 4);
+  }
+  function ultimoPreco(prod, mercado) { for (var i = prod.compras.length - 1; i >= 0; i--) if (prod.compras[i].mercado === mercado && prod.compras[i].preco > 0) return prod.compras[i]; return null; }
+  function melhorMercado(prod, tops) {
+    var best = null;
+    var ms = {}; prod.compras.forEach(function (c) { ms[c.mercado] = 1; });
+    Object.keys(ms).forEach(function (m) { var u = ultimoPreco(prod, m); if (u && (!best || u.preco < best.preco || (u.preco === best.preco && tops.indexOf(m) >= 0 && tops.indexOf(best.mercado) < 0))) best = u; });
+    return best;
+  }
+  function listaDoc() { return M.docs.lista || {}; }
+  function listaSugerida() {
+    var hoje = hojeISO(), limite = somaDias(hoje, HORIZONTE), tops = mercadosTop(), ign = listaDoc().ignorar || {}, man = listaDoc().manuais || {}, out = [], visto = {};
+    var prods = produtosM(), porK = {}; prods.forEach(function (p) { porK[p.k] = p; });
+    Object.keys(man).forEach(function (id) {
+      var it = man[id]; if (!it || it.excluido) return; var k = chave(it.produto), p = porK[k];
+      if (p && p.compras[p.compras.length - 1].data >= it.em) return;      // já comprado depois de incluído
+      visto[k] = 1; out.push({ k: k, nome: p ? p.nome : it.produto, motivo: "Incluído por você em " + dataBR(it.em), ordem: "0", best: p ? melhorMercado(p, tops) : null, manual: id });
+    });
+    prods.forEach(function (p) {
+      if (visto[p.k]) return;
+      var dias = []; p.compras.forEach(function (c) { if (dias[dias.length - 1] !== c.data) dias.push(c.data); });
+      if (dias.length < 2) return;
+      var ult = dias[dias.length - 1], ciclo = Math.max(1, Math.round(diasEntre(dias[0], ult) / (dias.length - 1))), prox = somaDias(ult, ciclo);
+      if (prox > limite || (ign[p.k] && ign[p.k] >= ult)) return;
+      var falta = diasEntre(hoje, prox);
+      out.push({ k: p.k, nome: p.nome, ordem: "1" + prox, best: melhorMercado(p, tops),
+        motivo: "Compra a cada ~" + ciclo + " dias; última em " + dataBR(ult) + " · " + (falta < 0 ? "deveria ter reposto há " + (-falta) + " dias" : falta === 0 ? "repor hoje" : "repor em " + falta + " dias") });
+    });
+    return out.sort(function (a, b) { return a.ordem < b.ordem ? -1 : a.ordem > b.ordem ? 1 : a.nome.localeCompare(b.nome, "pt-BR"); });
+  }
+  function renderCompras() {
+    seg("m-view", M.view);
+    ["lista", "precos", "notas"].forEach(function (v) { $("m-" + v).hidden = v !== M.view; });
+    var prods = produtosM(), tops = mercadosTop();
+    if (M.view === "lista") {
+      var li = listaSugerida();
+      $("dl-prod").innerHTML = prods.map(function (p) { return '<option value="' + esc(p.nome) + '">'; }).join("");
+      $("m-lista-hint").textContent = "Entram aqui os produtos que você costuma repor e cuja próxima compra cai até " + dataBR(somaDias(hojeISO(), HORIZONTE)) +
+        ", mais os que você incluir. A previsão usa o intervalo médio entre as compras de cada produto, então só aparece depois de duas compras dele. Ao lançar uma nota com o produto, ele sai da lista.";
+      $("m-lista-body").innerHTML = li.length ? li.map(function (x) {
+        return "<tr><td><strong>" + esc(x.nome) + "</strong>" + (x.manual ? ' <span class="tag">incluído</span>' : "") + '</td><td><span class="sec">' + esc(x.motivo) + "</span></td>" +
+          "<td>" + (x.best ? esc(x.best.mercado) : '<span class="sec">sem histórico de preço</span>') + '</td><td class="r num">' + (x.best ? brl.format(x.best.preco) + '<div class="sec">' + dataBR(x.best.data) + "</div>" : "—") + "</td>" +
+          '<td class="acts"><button class="btn small" ' + (x.manual ? 'data-lman="' + x.manual + '"' : 'data-lign="' + x.k + '"') + ">Tirar da lista</button></td></tr>";
+      }).join("") : '<tr><td colspan="5"><div class="empty">' + (M.notas.length ? "Nada para repor nos próximos " + HORIZONTE + " dias." : "Envie a primeira nota fiscal para começar. Você também pode incluir produtos à mão.") + "</div></td></tr>";
+    } else if (M.view === "precos") {
+      var q = $("m-q").value.trim().toLowerCase(), ps = prods.filter(function (p) { return !q || p.nome.toLowerCase().indexOf(q) >= 0; });
+      $("m-precos-hint").textContent = tops.length ? "Último preço unitário de cada produto nos " + (tops.length < 4 ? tops.length + " mercados em que há notas" : "4 mercados com mais notas") + ". O menor de cada linha está marcado." : "A comparação aparece quando houver notas lançadas.";
+      $("m-precos-tab").innerHTML = !tops.length ? '<tbody><tr><td><div class="empty">Nenhuma nota fiscal lançada ainda.</div></td></tr></tbody>' :
+        "<thead><tr><th>Produto</th>" + tops.map(function (m) { return '<th class="r">' + esc(m) + "</th>"; }).join("") + "</tr></thead><tbody>" + (ps.length ? ps.map(function (p) {
+          var us = tops.map(function (m) { return ultimoPreco(p, m); }), vals = us.filter(Boolean).map(function (u) { return u.preco; }), min = vals.length > 1 ? Math.min.apply(null, vals) : null;
+          return "<tr><td>" + esc(p.nome) + "</td>" + us.map(function (u) {
+            return '<td class="r num' + (u && u.preco === min ? " best" : "") + '">' + (u ? brl.format(u.preco) + (u.preco === min ? ' <span class="tag">menor</span>' : "") + '<div class="sec">' + dataBR(u.data) + "</div>" : '<span class="sec">—</span>') + "</td>";
+          }).join("") + "</tr>";
+        }).join("") : '<tr><td colspan="' + (tops.length + 1) + '"><div class="empty">Nenhum produto com esse nome.</div></td></tr>') + "</tbody>";
+    } else {
+      $("m-notas-body").innerHTML = M.notas.length ? M.notas.map(function (n) {
+        return '<tr><td class="num">' + dataBR(n.data) + "</td><td>" + esc(n.mercado) + '</td><td class="r num">' + (n.itens || []).length + '</td><td class="r num">' + brl.format(n.total || 0) +
+          '</td><td class="acts"><button class="btn small" data-nedit="' + n.id + '">Ver / editar</button> <button class="btn small danger" data-ndel="' + n.id + '">Excluir</button></td></tr>';
+      }).join("") : '<tr><td colspan="5"><div class="empty">Nenhuma nota fiscal lançada ainda. Use “+ Enviar nota fiscal”.</div></td></tr>';
+    }
+  }
+  function gravarM(doc, patch) { return gravar("mercado", doc, patch, function () { return !!M.docs[doc]; }); }
+
+  // --- diálogo da nota ---
+  function numBR(v, casas) { return (+v || 0).toLocaleString("pt-BR", { minimumFractionDigits: casas == null ? 2 : casas, maximumFractionDigits: 3 }); }
+  function totalNota() { return M.rows.reduce(function (a, r) { return a + (parseValor(r.qtd) || 0) * (parseValor(r.preco) || 0); }, 0); }
+  function renderRows() {
+    $("n-body").innerHTML = M.rows.map(function (r, i) {
+      var t = (parseValor(r.qtd) || 0) * (parseValor(r.preco) || 0);
+      return '<tr><td><input data-i="' + i + '" data-f="produto" value="' + esc(r.produto) + '" list="dl-prod" maxlength="80" aria-label="Produto"></td>' +
+        '<td class="w"><input class="num" data-i="' + i + '" data-f="qtd" value="' + esc(r.qtd) + '" inputmode="decimal" aria-label="Quantidade"></td>' +
+        '<td class="u"><input data-i="' + i + '" data-f="un" value="' + esc(r.un) + '" maxlength="6" aria-label="Unidade"></td>' +
+        '<td class="w"><input class="num" data-i="' + i + '" data-f="preco" value="' + esc(r.preco) + '" inputmode="decimal" aria-label="Preço unitário"></td>' +
+        '<td class="r num" data-t="' + i + '">' + brl.format(t) + '</td><td class="acts"><button class="btn small danger" type="button" data-rowdel="' + i + '" aria-label="Remover item">×</button></td></tr>';
+    }).join("") || '<tr><td colspan="6"><div class="empty">Nenhum item. Leia a foto da nota ou adicione os itens à mão.</div></td></tr>';
+    $("n-total").textContent = brl.format(totalNota());
+  }
+  function abrirNota(n) {
+    M.editId = n ? n.id : null;
+    $("nota-title").textContent = n ? "Nota fiscal" : "Enviar nota fiscal";
+    $("nota-ler-box").hidden = !!n || !M.sample; $("n-status").textContent = ""; $("n-file").value = "";
+    $("dl-merc").innerHTML = mercadosTop().concat(M.notas.map(function (x) { return x.mercado; })).filter(function (v, i, a) { return a.indexOf(v) === i; }).map(function (m) { return '<option value="' + esc(m) + '">'; }).join("");
+    $("dl-prod").innerHTML = produtosM().map(function (p) { return '<option value="' + esc(p.nome) + '">'; }).join("");
+    $("n-mercado").value = n ? n.mercado : ""; $("n-data").value = n ? n.data : hojeISO();
+    M.rows = n ? (n.itens || []).map(function (it) { return { produto: it.produto, qtd: numBR(it.qtd, 0), un: it.un || "un", preco: numBR(it.preco) }; }) : [];
+    renderRows(); $("dlg-nota").showModal();
+  }
+  function reduzImagem(file) {
+    // Reduz a foto para caber no limite de envio, sem perder a leitura dos números.
+    return new Promise(function (ok, erro) {
+      var img = new Image(), url = URL.createObjectURL(file);
+      img.onload = function () {
+        var esc2 = Math.min(1, 2000 / Math.max(img.width, img.height)), c = document.createElement("canvas");
+        c.width = Math.round(img.width * esc2); c.height = Math.round(img.height * esc2);
+        c.getContext("2d").drawImage(img, 0, 0, c.width, c.height); URL.revokeObjectURL(url);
+        c.toBlob(function (b) { b ? ok(b) : erro(new Error("imagem")); }, "image/jpeg", 0.85);
+      };
+      img.onerror = function () { URL.revokeObjectURL(url); erro(new Error("imagem")); };
+      img.src = url;
+    });
+  }
+  function lerNota() {
+    var f = $("n-file").files[0], st = $("n-status");
+    if (!f) { st.textContent = "Escolha a foto ou o print da nota primeiro."; return; }
+    var nomes = produtosM().map(function (p) { return p.nome; }).slice(0, 400), mercs = mercadosTop();
+    var prompt = "A imagem é uma nota fiscal ou cupom de supermercado brasileiro. Extraia a compra item por item.\n" +
+      "Responda somente com um JSON neste formato: {\"mercado\": \"nome curto do mercado\", \"data\": \"AAAA-MM-DD\", \"itens\": [{\"produto\": \"Leite integral Italac 1L\", \"qtd\": 2, \"un\": \"un\", \"preco\": 5.49}]}\n" +
+      "Regras: \"preco\" é o preço UNITÁRIO realmente pago (já com desconto do item), em reais, número com ponto decimal. \"qtd\" é a quantidade (para itens por peso, o peso em kg e \"un\": \"kg\"). " +
+      "\"produto\" é um nome legível e padronizado: tipo do produto, marca e tamanho, sem códigos nem abreviações do cupom. Não inclua linhas de total, troco, impostos ou pagamento. Se a data não aparecer, use \"\".\n" +
+      (mercs.length ? "Mercados já cadastrados (use exatamente o mesmo nome se for um deles): " + mercs.join("; ") + "\n" : "") +
+      (nomes.length ? "Produtos já cadastrados (se o item for o mesmo produto, use exatamente o mesmo nome): " + nomes.join("; ") + "\n" : "");
+    $("n-ler").disabled = true; $("n-parar").hidden = false; st.textContent = "Lendo a nota… pode levar até um minuto.";
+    M.ctl = new AbortController();
+    reduzImagem(f).then(function (blob) { return M.sample.json(prompt, { images: [blob], signal: M.ctl.signal, cache: false }); }).then(function (r) {
+      var itens = r && Array.isArray(r.itens) ? r.itens : [];
+      if (!itens.length) { st.textContent = "Não encontrei itens nessa imagem. Tente uma foto mais nítida ou digite os itens."; return; }
+      if (r.mercado && !$("n-mercado").value) $("n-mercado").value = String(r.mercado).slice(0, 60);
+      if (/^\d{4}-\d\d-\d\d$/.test(r.data || "")) $("n-data").value = r.data;
+      M.rows = M.rows.concat(itens.map(function (it) { return { produto: String(it.produto || "").slice(0, 80), qtd: numBR(it.qtd || 1, 0), un: String(it.un || "un").slice(0, 6), preco: numBR(it.preco) }; }));
+      renderRows(); st.textContent = itens.length + " itens lidos. Confira os valores com a nota antes de salvar.";
+    }).catch(function (e) {
+      var c = e && e.code;
+      st.textContent = c === "cancelled" ? "Leitura interrompida." : c === "not_granted" ? "A leitura pelo Claude não foi autorizada. Digite os itens ou envie o print na conversa." :
+        c === "rate_limited" ? "Muitas leituras seguidas. Aguarde um pouco e tente de novo." : c === "invalid_json" ? "Não consegui interpretar a resposta. Tente de novo com uma foto mais nítida." :
+        "Não foi possível ler a nota aqui (" + (c || "erro") + "). Digite os itens ou envie o print na conversa.";
+    }).then(function () { $("n-ler").disabled = false; $("n-parar").hidden = true; });
+  }
+  function salvarNota(ev) {
+    ev.preventDefault();
+    var itens = M.rows.map(function (r) { return { produto: r.produto.trim(), qtd: parseValor(r.qtd), un: (r.un || "un").trim(), preco: parseValor(r.preco) }; })
+      .filter(function (r) { return r.produto; });
+    if (!itens.length) { toast("Inclua pelo menos um item na nota."); return; }
+    var ruim = itens.filter(function (r) { return isNaN(r.qtd) || isNaN(r.preco) || r.qtd <= 0; })[0];
+    if (ruim) { toast("Confira quantidade e preço de “" + ruim.produto + "”."); return; }
+    var data = $("n-data").value, antiga = M.editId ? M.notas.filter(function (n) { return n.id === M.editId; })[0] : null;
+    var nota = { data: data, mercado: $("n-mercado").value.trim(), itens: itens, total: Math.round(itens.reduce(function (a, r) { return a + r.qtd * r.preco; }, 0) * 100) / 100 };
+    var doc = antiga ? antiga._doc : "notas-" + data.slice(0, 4), id = antiga ? antiga.id : novoId("nf"), patch = { itens: {} }; patch.itens[id] = nota;
+    $("dlg-nota").close();
+    gravarM(doc, patch).then(function () {
+      toast(antiga ? "Nota atualizada." : "Nota salva com " + itens.length + " itens.");
+      // produtos comprados saem da lista manual
+      var man = listaDoc().manuais || {}, ks = {}, tira = {}; itens.forEach(function (r) { ks[chave(r.produto)] = 1; });
+      Object.keys(man).forEach(function (mid) { if (man[mid] && !man[mid].excluido && ks[chave(man[mid].produto)] && man[mid].em <= data) tira[mid] = { excluido: true }; });
+      if (Object.keys(tira).length) return gravarM("lista", { manuais: tira });
+    }).catch(function () {});
+  }
+
   function render() {
-    ["painel", "lancamentos", "recorrentes", "cadastros"].forEach(function (t) { $("v-" + t).hidden = t !== S.tab; });
+    ["painel", "lancamentos", "recorrentes", "cadastros", "compras"].forEach(function (t) { $("v-" + t).hidden = t !== S.tab; });
     Array.prototype.forEach.call($("tabs").children, function (a) { if (a.getAttribute("href") === "#" + S.tab) a.setAttribute("aria-current", "page"); else a.removeAttribute("aria-current"); });
-    $("filters").hidden = S.tab === "recorrentes" || S.tab === "cadastros";
+    $("filters").hidden = S.tab !== "painel" && S.tab !== "lancamentos";
+    $("btn-novo").hidden = S.tab === "compras";
     renderOpcoes();
-    if (S.tab === "painel") renderPainel(); else if (S.tab === "lancamentos") renderLanc(); else if (S.tab === "recorrentes") renderRec(); else renderCad();
+    if (S.tab === "painel") renderPainel(); else if (S.tab === "lancamentos") renderLanc(); else if (S.tab === "recorrentes") renderRec(); else if (S.tab === "compras") renderCompras(); else renderCad();
   }
 
   /* ---------- formulário ---------- */
@@ -707,6 +946,17 @@ dialog h2 { font-family: var(--f-display); font-size: 17px; margin: 0; }
     else if (b.parentNode.id === "f-tipo") { S.f.tipo = d.v; seg("f-tipo", d.v); S.pagina = 0; render(); }
     else if (b.parentNode.id === "l-tipo") { S.tipoForm = d.v; seg("l-tipo", d.v); }
     else if (d.pg) { S.pagina += +d.pg; renderLanc(); }
+    else if (b.parentNode.id === "m-view") { M.view = d.v; renderCompras(); }
+    else if (b.id === "m-nova") abrirNota(null);
+    else if (b.id === "n-cancel") { if (M.ctl) M.ctl.abort(); $("dlg-nota").close(); }
+    else if (b.id === "n-add") { M.rows.push({ produto: "", qtd: "1", un: "un", preco: "" }); renderRows(); var ins = $("n-body").querySelectorAll('input[data-f="produto"]'); ins[ins.length - 1].focus(); }
+    else if (b.id === "n-ler") lerNota();
+    else if (b.id === "n-parar") { if (M.ctl) M.ctl.abort(); }
+    else if (d.rowdel) { M.rows.splice(+d.rowdel, 1); renderRows(); }
+    else if (d.nedit) { x = M.notas.filter(function (n) { return n.id === d.nedit; })[0]; if (x) abrirNota(x); }
+    else if (d.ndel) confirma(b, function () { var n = M.notas.filter(function (q) { return q.id === d.ndel; })[0]; if (!n) return; var pt = { itens: {} }; pt.itens[n.id] = { excluido: true }; gravarM(n._doc, pt).then(function () { toast("Nota excluída."); }).catch(function () {}); })
+    else if (d.lman) { var pm = { manuais: {} }; pm.manuais[d.lman] = { excluido: true }; gravarM("lista", pm).catch(function () {}); }
+    else if (d.lign) { var pi = { ignorar: {} }; pi.ignorar[d.lign] = hojeISO(); gravarM("lista", pi).catch(function () {}); }
     else if (d.rec) { S.recAberto[d.rec] = !S.recAberto[d.rec]; renderRec(); }
     else if (d.toggle && (x = S.porId[d.toggle])) { var m = {}; m[x.id] = { status: x.status === "aberto" ? "pago" : "aberto" }; gravarItens(m).catch(function () {}); }
     else if (d.edit && (x = S.porId[d.edit])) abrirForm(x);
@@ -735,6 +985,19 @@ dialog h2 { font-family: var(--f-display); font-size: 17px; margin: 0; }
     ajustaForm();
   });
   $("form-l").addEventListener("submit", salvarForm);
+  $("form-nota").addEventListener("submit", salvarNota);
+  $("n-body").addEventListener("input", function (ev) {
+    var t = ev.target, i = t.dataset.i; if (i == null || !M.rows[i]) return;
+    M.rows[i][t.dataset.f] = t.value;
+    var cel = $("n-body").querySelector('[data-t="' + i + '"]'); if (cel) cel.textContent = brl.format((parseValor(M.rows[i].qtd) || 0) * (parseValor(M.rows[i].preco) || 0));
+    $("n-total").textContent = brl.format(totalNota());
+  });
+  $("m-q").addEventListener("input", renderCompras);
+  $("form-lista").addEventListener("submit", function (ev) {
+    ev.preventDefault(); var nome = $("m-prod").value.trim(); if (!nome) return;
+    var pm = { manuais: {} }; pm.manuais[novoId("l")] = { produto: nome, em: hojeISO() };
+    gravarM("lista", pm).then(function () { $("m-prod").value = ""; toast("Incluído na lista."); }).catch(function () {});
+  });
   $("form-estab").addEventListener("submit", function (ev) {
     ev.preventDefault(); var nome = $("e-nome").value.trim(); if (!nome) return;
     if (estabPorNome(nome)) { toast("“" + nome + "” já está no cadastro."); return; }
@@ -746,7 +1009,7 @@ dialog h2 { font-family: var(--f-display); font-size: 17px; margin: 0; }
     if (nomesCats().indexOf(nome) >= 0) { toast("“" + nome + "” já existe."); return; }
     gravarCad("categorias", novoId("k"), { nome: nome }).then(function () { $("k-nome").value = ""; toast("Categoria cadastrada."); }).catch(function () {});
   });
-  function rota() { var h = location.hash.slice(1); S.tab = ["painel", "lancamentos", "recorrentes", "cadastros"].indexOf(h) >= 0 ? h : "painel"; render(); }
+  function rota() { var h = location.hash.slice(1); S.tab = ["painel", "lancamentos", "recorrentes", "cadastros", "compras"].indexOf(h) >= 0 ? h : "painel"; render(); }
   window.addEventListener("hashchange", rota);
   var rz; window.addEventListener("resize", function () { clearTimeout(rz); rz = setTimeout(function () { if (S.tab === "painel") renderPainel(); }, 150); });
 
@@ -766,6 +1029,11 @@ dialog h2 { font-family: var(--f-display); font-size: 17px; margin: 0; }
         var docs = {}; snap.docs.forEach(function (d) { docs[d.id] = d.data() || {}; });
         S.docs = docs; reindex(); render(); ok(snap);
       }, falha);
+      db.collection("mercado").onSnapshot(function (snap) {
+        var docs = {}; snap.docs.forEach(function (d) { docs[d.id] = d.data() || {}; });
+        M.docs = docs; reindexM(); if (S.tab === "compras") renderCompras();
+      }, falha);
+      use("sample").then(function (sm) { M.sample = sm || null; });
       db.collection("cad").onSnapshot(function (snap) {
         var docs = {}; snap.docs.forEach(function (d) { docs[d.id] = d.data() || {}; });
         S.cadDocs = docs; S.estabs = lista("estabelecimentos"); S.cats = lista("categorias"); render();

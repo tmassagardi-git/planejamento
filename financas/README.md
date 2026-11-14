@@ -22,3 +22,11 @@ Cada documento da coleção `lanc` guarda um mapa `itens` de lançamentos:
 `descricao`, `categoria`, `valor`, `meio`, `conta`, `parcela`, `grupoParcela`,
 `status` (pago/aberto), `recorrente`, `interno` (transferências entre contas
 próprias, pagamento da fatura já detalhada, aplicações) e `excluido`.
+
+## Compras de mercado
+
+A aba "Compras" é independente do financeiro e usa a coleção `mercado`:
+`notas-AAAA` guarda as notas fiscais (mercado, data e itens com quantidade e
+preço unitário) e `lista` guarda os produtos incluídos à mão e os dispensados.
+A foto da nota é lida pelo Claude na própria página; a lista sugere o que repor
+nos próximos 20 dias pelo intervalo médio entre as compras de cada produto.
